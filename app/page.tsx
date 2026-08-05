@@ -1,17 +1,18 @@
 "use client";
-import DraftCard from "@/components/workspace/DraftCard";
-import Link from "next/link";
+
 import { useEffect, useState } from "react";
 
+import NewJournalButton from "@/components/workspace/NewJournalButton";
+import DocumentList from "@/components/workspace/DocumentList";
+
+import { DocumentModel } from "@/lib/models/document";
+import { loadRecentDocuments } from "@/services/document-service";
+
 export default function HomePage() {
-  const [draftTitle, setDraftTitle] = useState("");
+  const [documents, setDocuments] = useState<DocumentModel[]>([]);
 
   useEffect(() => {
-    const savedTitle = localStorage.getItem("studio-title");
-
-    if (savedTitle) {
-      setDraftTitle(savedTitle);
-    }
+    setDocuments(loadRecentDocuments());
   }, []);
 
   return (
@@ -28,12 +29,7 @@ export default function HomePage() {
         </header>
 
         <section className="mt-16 flex gap-4">
-          <Link
-            href="/documents/demo"
-            className="rounded-2xl bg-black px-8 py-4 text-white transition hover:bg-neutral-800"
-          >
-            New Journal
-          </Link>
+          <NewJournalButton />
 
           <button className="rounded-2xl border border-neutral-300 px-8 py-4 transition hover:bg-neutral-100">
             New Project
@@ -45,13 +41,7 @@ export default function HomePage() {
             Continue Writing
           </h2>
 
-          {draftTitle ? (
-  <DraftCard title={draftTitle} />
-) : (
-  <div className="mt-6 rounded-2xl border border-dashed border-neutral-300 p-10 text-neutral-500">
-    No drafts yet.
-  </div>
-)}
+          <DocumentList documents={documents} />
         </section>
 
         <section className="mt-16 border-t pt-10">

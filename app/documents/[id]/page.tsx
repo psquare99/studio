@@ -2,34 +2,46 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import {
+  loadDocument,
+  saveDocument,
+} from "@/services/document-service";
 
-export default function EditorPage() {
+export default function DocumentPage() {
+  const params = useParams();
+  const id = params.id as string;
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
-  // Load saved draft
+  // Load document
   useEffect(() => {
-    const savedTitle = localStorage.getItem("studio-title");
-    const savedContent = localStorage.getItem("studio-content");
+    const document = loadDocument(id);
 
-    if (savedTitle) {
-      setTitle(savedTitle);
+    if (!document) {
+      return;
     }
 
-    if (savedContent) {
-      setContent(savedContent);
+    setTitle(document.title);
+    setContent(document.content);
+  }, [id]);
+
+  // Save document
+  useEffect(() => {
+    const document = loadDocument(id);
+
+    if (!document) {
+      return;
     }
-  }, []);
 
-  // Save title
-  useEffect(() => {
-    localStorage.setItem("studio-title", title);
-  }, [title]);
-
-  // Save content
-  useEffect(() => {
-    localStorage.setItem("studio-content", content);
-  }, [content]);
+    saveDocument({
+      ...document,
+      title,
+      content,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [id, title, content]);
 
   return (
     <main className="min-h-screen bg-white">
@@ -54,7 +66,17 @@ export default function EditorPage() {
           placeholder="Start writing..."
           className="mt-10 min-h-[600px] w-full resize-none border-none text-xl leading-8 outline-none placeholder:text-neutral-400"
         />
+        
       </div>
+      
     </main>
+  );
+  
+}
+export function getRecentDocuments() {
+  return getDocuments().sort(
+    (a, b) =>
+      new Date(b.updatedAt).getTime() -
+      new Date(a.updatedAt).getTime()
   );
 }

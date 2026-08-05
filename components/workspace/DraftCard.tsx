@@ -1,14 +1,18 @@
 import Link from "next/link";
 
 interface DraftCardProps {
+  id: string;
   title: string;
 }
 
-export default function DraftCard({ title }: DraftCardProps) {
+export default function DraftCard({
+  id,
+  title,
+}: DraftCardProps) {
   return (
     <Link
-      href="/documents/demo"
-      className="mt-6 block rounded-2xl border border-neutral-200 p-6 transition hover:border-black"
+      href={`/documents/${id}`}
+      className="block rounded-2xl border border-neutral-200 p-6 transition hover:border-black"
     >
       <p className="text-xl font-semibold">
         {title}
