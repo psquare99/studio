@@ -1,4 +1,5 @@
-import { MetadataField } from "@/lib/models/metadata-field";
+import { MetadataField } from "./metadata-field";
+
 export interface Schema {
   id: string;
 

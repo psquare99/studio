@@ -1,4 +1,4 @@
-import { DocumentModel } from "@/lib/models/document";
+import { Document } from "@/lib/models/document";
 import {
   createDocument,
   getDocument,
@@ -6,18 +6,48 @@ import {
   updateDocument,
 } from "@/lib/storage/document-storage";
 
-export function createNewDocument(): DocumentModel {
-  return createDocument();
+import { loadSchemaForContentType } from "./schema-service";
+import { EditorDocument } from "./types/editor-document";
+
+export function createNewDocument(
+  workspaceId: string,
+  contentTypeId: string
+): Document {
+  return createDocument(workspaceId, contentTypeId);
 }
 
-export function loadDocument(id: string): DocumentModel | undefined {
+export function loadDocument(id: string): Document | undefined {
   return getDocument(id);
 }
 
-export function saveDocument(document: DocumentModel): void {
+export function loadEditorDocument(
+  id: string
+): EditorDocument | undefined {
+  const document = getDocument(id);
+
+  if (!document) {
+    return undefined;
+  }
+
+  const schema = loadSchemaForContentType(
+    document.workspaceId,
+    document.contentTypeId
+  );
+
+  if (!schema) {
+    return undefined;
+  }
+
+  return {
+    document,
+    schema,
+  };
+}
+
+export function saveDocument(document: Document): void {
   updateDocument(document);
 }
 
-export function loadRecentDocuments(): DocumentModel[] {
+export function loadRecentDocuments(): Document[] {
   return getRecentDocuments();
 }

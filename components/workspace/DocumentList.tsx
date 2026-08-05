@@ -1,8 +1,8 @@
 import DraftCard from "./DraftCard";
-import { DocumentModel } from "@/lib/models/document";
+import { Document } from "@/lib/models/document";
 
 interface DocumentListProps {
-  documents: DocumentModel[];
+  documents: Document[];
 }
 
 export default function DocumentList({
@@ -20,10 +20,10 @@ export default function DocumentList({
     <div className="mt-6 space-y-4">
       {documents.map((document) => (
         <DraftCard
-    key={document.id}
-    id={document.id}
-    title={document.title || "Untitled"}
-/>
+          key={document.id}
+          id={document.id}
+          title={document.metadata.title || "Untitled"}
+        />
       ))}
     </div>
   );

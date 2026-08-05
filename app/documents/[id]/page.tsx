@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+
 import {
   loadDocument,
   saveDocument,
@@ -12,10 +13,8 @@ export default function DocumentPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const [metadata, setMetadata] = useState<Record<string, string>>({});
 
-  // Load document
   useEffect(() => {
     const document = loadDocument(id);
 
@@ -23,11 +22,9 @@ export default function DocumentPage() {
       return;
     }
 
-    setTitle(document.title);
-    setContent(document.content);
+    setMetadata(document.metadata);
   }, [id]);
 
-  // Save document
   useEffect(() => {
     const document = loadDocument(id);
 
@@ -37,11 +34,10 @@ export default function DocumentPage() {
 
     saveDocument({
       ...document,
-      title,
-      content,
+      metadata,
       updatedAt: new Date().toISOString(),
     });
-  }, [id, title, content]);
+  }, [id, metadata]);
 
   return (
     <main className="min-h-screen bg-white">
@@ -54,29 +50,21 @@ export default function DocumentPage() {
         </Link>
 
         <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          value={metadata.title ?? ""}
+          onChange={(e) =>
+            setMetadata({
+              ...metadata,
+              title: e.target.value,
+            })
+          }
           placeholder="Untitled"
           className="mt-8 w-full border-none text-7xl font-bold outline-none placeholder:text-neutral-400"
         />
 
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Start writing..."
-          className="mt-10 min-h-[600px] w-full resize-none border-none text-xl leading-8 outline-none placeholder:text-neutral-400"
-        />
-        
+        <div className="mt-10 rounded-xl border border-dashed border-neutral-300 p-8 text-neutral-500">
+          Block editor coming soon...
+        </div>
       </div>
-      
     </main>
-  );
-  
-}
-export function getRecentDocuments() {
-  return getDocuments().sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() -
-      new Date(a.updatedAt).getTime()
   );
 }
