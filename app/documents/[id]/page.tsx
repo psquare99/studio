@@ -26,6 +26,11 @@ export default function DocumentPage() {
     "saved" | "saving"
   >("saved");
 
+  const [publishStatus, setPublishStatus] =
+    useState<
+      "idle" | "publishing" | "published" | "error"
+    >("idle");
+
   const hasLoaded = useRef(false);
 
   useEffect(() => {
@@ -124,27 +129,68 @@ export default function DocumentPage() {
     };
   }, [title, excerpt, content]);
 
-  function handlePublish() {
+  async function handlePublish() {
     if (!document) {
       return;
     }
 
-    const publishedDocument: Document = {
-      ...document,
+    try {
+      setPublishStatus("publishing");
 
-      status: "published",
+      const publishedDocument: Document = {
+        ...document,
 
-      publishedAt:
-        document.publishedAt ??
-        new Date().toISOString(),
+        status: "published",
 
-      updatedAt:
-        new Date().toISOString(),
-    };
+        publishedAt:
+          document.publishedAt ??
+          new Date().toISOString(),
 
-    saveDocument(publishedDocument);
+        updatedAt:
+          new Date().toISOString(),
+      };
 
-    setDocument(publishedDocument);
+      const response = await fetch(
+        `/api/documents/${id}/publish`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify(
+            publishedDocument
+          ),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Publishing request failed."
+        );
+      }
+
+      saveDocument(
+        publishedDocument
+      );
+
+      setDocument(
+        publishedDocument
+      );
+
+      setPublishStatus(
+        "published"
+      );
+    } catch (error) {
+      console.error(
+        "Failed to publish document:",
+        error
+      );
+
+      setPublishStatus("error");
+    }
   }
 
   if (!document) {
@@ -164,7 +210,6 @@ export default function DocumentPage() {
       <div className="mx-auto max-w-3xl px-8 py-12">
 
         <div className="flex items-center justify-between">
-
           <Link
             href="/content/journal"
             className="text-sm text-neutral-500 transition hover:text-black"
@@ -173,7 +218,6 @@ export default function DocumentPage() {
           </Link>
 
           <div className="flex items-center gap-4">
-
             <span className="text-sm text-neutral-400">
               {saveStatus === "saving"
                 ? "Saving..."
@@ -183,20 +227,35 @@ export default function DocumentPage() {
             {document.status === "draft" && (
               <button
                 onClick={handlePublish}
-                className="rounded-xl bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800"
+                disabled={
+                  publishStatus ===
+                  "publishing"
+                }
+                className="rounded-xl bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Publish
+                {publishStatus ===
+                "publishing"
+                  ? "Publishing..."
+                  : "Publish"}
               </button>
             )}
 
-            {document.status === "published" && (
+            {document.status ===
+              "published" && (
               <span className="rounded-xl bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-700">
-                Published
+                {publishStatus === "error"
+                  ? "Publish failed"
+                  : "Published"}
               </span>
             )}
 
+            {publishStatus === "error" &&
+              document.status === "draft" && (
+                <span className="text-sm text-red-500">
+                  Publish failed
+                </span>
+              )}
           </div>
-
         </div>
 
         <div className="mt-16">
