@@ -15,10 +15,13 @@ export default function DocumentPage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [document, setDocument] = useState<Document | null>(null);
+  const [document, setDocument] =
+    useState<Document | null>(null);
+
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
+
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving"
   >("saved");
@@ -33,18 +36,30 @@ export default function DocumentPage() {
     }
 
     setDocument(loadedDocument);
-    setTitle(loadedDocument.metadata.title ?? "");
-    setExcerpt(loadedDocument.metadata.excerpt ?? "");
+
+    setTitle(
+      loadedDocument.metadata.title ?? ""
+    );
+
+    setExcerpt(
+      loadedDocument.metadata.excerpt ?? ""
+    );
 
     const text = loadedDocument.blocks
-      .filter((block) => block.type === "paragraph")
+      .filter(
+        (block) => block.type === "paragraph"
+      )
       .map((block) => {
-        const data = block.data as { text?: string };
+        const data = block.data as {
+          text?: string;
+        };
+
         return data.text ?? "";
       })
       .join("\n\n");
 
     setContent(text);
+
     hasLoaded.current = true;
   }, [id]);
 
@@ -56,19 +71,25 @@ export default function DocumentPage() {
     setSaveStatus("saving");
 
     const timeout = window.setTimeout(() => {
-      const existingParagraphs = document.blocks.filter(
-        (block) => block.type === "paragraph"
-      );
+      const existingParagraphs =
+        document.blocks.filter(
+          (block) =>
+            block.type === "paragraph"
+        );
 
       const blocks = content
         .split(/\n\s*\n/)
-        .map((paragraph) => paragraph.trim())
+        .map((paragraph) =>
+          paragraph.trim()
+        )
         .filter(Boolean)
         .map((text, index) => ({
           id:
             existingParagraphs[index]?.id ??
             crypto.randomUUID(),
+
           type: "paragraph",
+
           data: {
             text,
           },
@@ -79,17 +100,22 @@ export default function DocumentPage() {
 
         metadata: {
           ...document.metadata,
+
           title,
+
           excerpt,
         },
 
         blocks,
 
-        updatedAt: new Date().toISOString(),
+        updatedAt:
+          new Date().toISOString(),
       };
 
       saveDocument(updatedDocument);
+
       setDocument(updatedDocument);
+
       setSaveStatus("saved");
     }, 500);
 
@@ -105,11 +131,19 @@ export default function DocumentPage() {
 
     const publishedDocument: Document = {
       ...document,
+
       status: "published",
-      updatedAt: new Date().toISOString(),
+
+      publishedAt:
+        document.publishedAt ??
+        new Date().toISOString(),
+
+      updatedAt:
+        new Date().toISOString(),
     };
 
     saveDocument(publishedDocument);
+
     setDocument(publishedDocument);
   }
 
@@ -130,6 +164,7 @@ export default function DocumentPage() {
       <div className="mx-auto max-w-3xl px-8 py-12">
 
         <div className="flex items-center justify-between">
+
           <Link
             href="/content/journal"
             className="text-sm text-neutral-500 transition hover:text-black"
@@ -138,6 +173,7 @@ export default function DocumentPage() {
           </Link>
 
           <div className="flex items-center gap-4">
+
             <span className="text-sm text-neutral-400">
               {saveStatus === "saving"
                 ? "Saving..."
@@ -158,30 +194,40 @@ export default function DocumentPage() {
                 Published
               </span>
             )}
+
           </div>
+
         </div>
 
         <div className="mt-16">
+
           <input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) =>
+              setTitle(e.target.value)
+            }
             placeholder="Untitled"
             className="w-full border-none text-6xl font-bold tracking-tight outline-none placeholder:text-neutral-300"
           />
 
           <input
             value={excerpt}
-            onChange={(e) => setExcerpt(e.target.value)}
+            onChange={(e) =>
+              setExcerpt(e.target.value)
+            }
             placeholder="A short description..."
             className="mt-6 w-full border-none text-xl text-neutral-500 outline-none placeholder:text-neutral-300"
           />
 
           <textarea
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) =>
+              setContent(e.target.value)
+            }
             placeholder="Start writing..."
             className="mt-12 min-h-[500px] w-full resize-none border-none text-lg leading-8 text-neutral-700 outline-none placeholder:text-neutral-300"
           />
+
         </div>
 
       </div>

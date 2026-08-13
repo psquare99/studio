@@ -14,10 +14,18 @@ export interface DocumentBlock {
 
 export interface Document {
   id: string;
+
   workspaceId: string;
+
   contentTypeId: string;
+
   metadata: DocumentMetadata;
+
   blocks: DocumentBlock[];
+
   status: DocumentStatus;
+
+  publishedAt?: string;
+
   updatedAt: string;
 }
