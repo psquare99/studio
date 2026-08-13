@@ -13,6 +13,8 @@ import type { Document } from "@/lib/models/document";
 import type { Schema } from "@/lib/models/schema";
 import type { MetadataField } from "@/lib/models/metadata-field";
 
+import BlockEditor from "@/components/editor/BlockEditor";
+
 export default function DocumentPage() {
   const params = useParams();
   const id = params.id as string;
@@ -26,8 +28,8 @@ export default function DocumentPage() {
   const [metadata, setMetadata] =
     useState<Record<string, string>>({});
 
-  const [content, setContent] =
-    useState("");
+  const [blocks, setBlocks] =
+    useState<Document["blocks"]>([]);
 
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving"
@@ -60,21 +62,9 @@ export default function DocumentPage() {
       ...loadedDocument.metadata,
     });
 
-    const text = loadedDocument.blocks
-      .filter(
-        (block) =>
-          block.type === "paragraph"
-      )
-      .map((block) => {
-        const data = block.data as {
-          text?: string;
-        };
-
-        return data.text ?? "";
-      })
-      .join("\n\n");
-
-    setContent(text);
+    setBlocks([
+      ...loadedDocument.blocks,
+    ]);
 
     hasLoaded.current = true;
   }, [id]);
@@ -91,30 +81,6 @@ export default function DocumentPage() {
     setSaveStatus("saving");
 
     const timeout = window.setTimeout(() => {
-      const existingParagraphs =
-        document.blocks.filter(
-          (block) =>
-            block.type === "paragraph"
-        );
-
-      const blocks = content
-        .split(/\n\s*\n/)
-        .map((paragraph) =>
-          paragraph.trim()
-        )
-        .filter(Boolean)
-        .map((text, index) => ({
-          id:
-            existingParagraphs[index]?.id ??
-            crypto.randomUUID(),
-
-          type: "paragraph",
-
-          data: {
-            text,
-          },
-        }));
-
       const updatedDocument: Document = {
         ...document,
 
@@ -122,7 +88,9 @@ export default function DocumentPage() {
           ...metadata,
         },
 
-        blocks,
+        blocks: [
+          ...blocks,
+        ],
 
         updatedAt:
           new Date().toISOString(),
@@ -140,7 +108,7 @@ export default function DocumentPage() {
     };
   }, [
     metadata,
-    content,
+    blocks,
   ]);
 
   function updateMetadata(
@@ -199,7 +167,7 @@ export default function DocumentPage() {
             "A short description..."
           }
           required={field.required}
-          className={`${commonClassName} text-xl text-neutral-500`}
+          className={`${commonClassName} mt-6 text-xl text-neutral-500`}
         />
       );
     }
@@ -207,46 +175,72 @@ export default function DocumentPage() {
     switch (field.type) {
       case "number":
         return (
-          <input
+          <div
             key={field.id}
-            type="number"
-            value={value}
-            onChange={(event) =>
-              updateMetadata(
-                field.id,
-                event.target.value
-              )
-            }
-            placeholder={
-              field.placeholder
-            }
-            required={field.required}
-            className={`${commonClassName} text-lg text-neutral-700`}
-          />
+            className="mt-8 space-y-2"
+          >
+            <label className="block text-sm font-medium text-neutral-500">
+              {field.label}
+              {field.required && (
+                <span className="ml-1 text-neutral-400">
+                  *
+                </span>
+              )}
+            </label>
+
+            <input
+              type="number"
+              value={value}
+              onChange={(event) =>
+                updateMetadata(
+                  field.id,
+                  event.target.value
+                )
+              }
+              placeholder={
+                field.placeholder
+              }
+              required={field.required}
+              className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
+            />
+          </div>
         );
 
       case "date":
         return (
-          <input
+          <div
             key={field.id}
-            type="date"
-            value={value}
-            onChange={(event) =>
-              updateMetadata(
-                field.id,
-                event.target.value
-              )
-            }
-            required={field.required}
-            className={`${commonClassName} text-lg text-neutral-700`}
-          />
+            className="mt-8 space-y-2"
+          >
+            <label className="block text-sm font-medium text-neutral-500">
+              {field.label}
+              {field.required && (
+                <span className="ml-1 text-neutral-400">
+                  *
+                </span>
+              )}
+            </label>
+
+            <input
+              type="date"
+              value={value}
+              onChange={(event) =>
+                updateMetadata(
+                  field.id,
+                  event.target.value
+                )
+              }
+              required={field.required}
+              className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
+            />
+          </div>
         );
 
       case "boolean":
         return (
           <label
             key={field.id}
-            className="flex items-center gap-3 text-sm text-neutral-700"
+            className="mt-8 flex items-center gap-3 text-sm text-neutral-700"
           >
             <input
               type="checkbox"
@@ -261,7 +255,9 @@ export default function DocumentPage() {
               }
             />
 
-            <span>{field.label}</span>
+            <span>
+              {field.label}
+            </span>
           </label>
         );
 
@@ -270,7 +266,7 @@ export default function DocumentPage() {
         return (
           <div
             key={field.id}
-            className="space-y-2"
+            className="mt-8 space-y-2"
           >
             <label className="block text-sm font-medium text-neutral-500">
               {field.label}
@@ -315,6 +311,10 @@ export default function DocumentPage() {
         metadata: {
           ...metadata,
         },
+
+        blocks: [
+          ...blocks,
+        ],
 
         status: "published",
 
@@ -440,13 +440,12 @@ export default function DocumentPage() {
             renderMetadataField
           )}
 
-          <textarea
-            value={content}
-            onChange={(event) =>
-              setContent(event.target.value)
+          <BlockEditor
+            blocks={blocks}
+            allowedBlocks={
+              schema.allowedBlocks
             }
-            placeholder="Start writing..."
-            className="mt-12 min-h-[500px] w-full resize-none border-none text-lg leading-8 text-neutral-700 outline-none placeholder:text-neutral-300"
+            onChange={setBlocks}
           />
 
         </div>
