@@ -8,6 +8,82 @@ interface BlockEditorProps {
   allowedBlocks: string[];
 }
 
+const blockLabels: Record<string, string> = {
+  paragraph: "Paragraph",
+  heading: "Heading",
+  quote: "Quote",
+  image: "Image",
+  code: "Code",
+  gallery: "Gallery",
+};
+
+function createBlock(type: string): DocumentBlock {
+  switch (type) {
+    case "paragraph":
+      return {
+        id: crypto.randomUUID(),
+        type: "paragraph",
+        data: {
+          text: "",
+        },
+      };
+
+    case "heading":
+      return {
+        id: crypto.randomUUID(),
+        type: "heading",
+        data: {
+          text: "",
+          level: 2,
+        },
+      };
+
+    case "quote":
+      return {
+        id: crypto.randomUUID(),
+        type: "quote",
+        data: {
+          text: "",
+        },
+      };
+
+    case "image":
+      return {
+        id: crypto.randomUUID(),
+        type: "image",
+        data: {
+          src: "",
+          alt: "",
+        },
+      };
+
+    case "code":
+      return {
+        id: crypto.randomUUID(),
+        type: "code",
+        data: {
+          code: "",
+        },
+      };
+
+    case "gallery":
+      return {
+        id: crypto.randomUUID(),
+        type: "gallery",
+        data: {
+          images: [],
+        },
+      };
+
+    default:
+      return {
+        id: crypto.randomUUID(),
+        type,
+        data: {},
+      };
+  }
+}
+
 export default function BlockEditor({
   blocks,
   onChange,
@@ -29,20 +105,14 @@ export default function BlockEditor({
     );
   }
 
-  function addParagraph() {
-    if (!allowedBlocks.includes("paragraph")) {
+  function addBlock(type: string) {
+    if (!allowedBlocks.includes(type)) {
       return;
     }
 
     onChange([
       ...blocks,
-      {
-        id: crypto.randomUUID(),
-        type: "paragraph",
-        data: {
-          text: "",
-        },
-      },
+      createBlock(type),
     ]);
   }
 
@@ -55,7 +125,7 @@ export default function BlockEditor({
   }
 
   return (
-    <div className="mt-12 space-y-6">
+    <div className="mt-12 space-y-8">
       {blocks.map((block) => {
         if (block.type === "paragraph") {
           const data = block.data as {
@@ -97,25 +167,55 @@ export default function BlockEditor({
         return (
           <div
             key={block.id}
-            className="rounded-lg border border-dashed border-neutral-200 p-4 text-sm text-neutral-400"
+            className="group relative rounded-xl border border-dashed border-neutral-200 p-6"
           >
-            Unsupported block:{" "}
-            {block.type}
+            <div className="text-sm text-neutral-400">
+              {blockLabels[block.type] ??
+                block.type}
+            </div>
+
+            <div className="mt-2 text-xs text-neutral-300">
+              This block type will be
+              supported by the editor next.
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                deleteBlock(block.id)
+              }
+              className="absolute right-4 top-4 text-xs text-neutral-400 transition hover:text-red-500"
+            >
+              Delete
+            </button>
           </div>
         );
       })}
 
-      {allowedBlocks.includes(
-        "paragraph"
-      ) && (
-        <button
-          type="button"
-          onClick={addParagraph}
-          className="text-sm text-neutral-400 transition hover:text-black"
-        >
-          + Add paragraph
-        </button>
-      )}
+      <div className="pt-2">
+        <div className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-neutral-400">
+          Add block
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {allowedBlocks.map(
+            (blockType) => (
+              <button
+                key={blockType}
+                type="button"
+                onClick={() =>
+                  addBlock(blockType)
+                }
+                className="rounded-lg border border-neutral-200 px-4 py-2 text-sm text-neutral-500 transition hover:border-neutral-400 hover:text-black"
+              >
+                +{" "}
+                {blockLabels[blockType] ??
+                  blockType}
+              </button>
+            )
+          )}
+        </div>
+      </div>
     </div>
   );
 }
