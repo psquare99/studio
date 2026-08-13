@@ -23,6 +23,8 @@ export default function DocumentList({
           key={document.id}
           id={document.id}
           title={document.metadata.title || "Untitled"}
+          excerpt={document.metadata.excerpt}
+          updatedAt={document.updatedAt}
         />
       ))}
     </div>

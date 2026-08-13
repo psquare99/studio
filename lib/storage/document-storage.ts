@@ -9,11 +9,19 @@ export function getDocuments(): Document[] {
     return [];
   }
 
-  return JSON.parse(data);
+  const documents = JSON.parse(data) as Document[];
+
+  return documents.map((document) => ({
+    ...document,
+    status: document.status ?? "draft",
+  }));
 }
 
 export function saveDocuments(documents: Document[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(documents));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(documents)
+  );
 }
 
 export function createDocument(
@@ -23,18 +31,20 @@ export function createDocument(
   const documents = getDocuments();
 
   const document: Document = {
-  id: crypto.randomUUID(),
+    id: crypto.randomUUID(),
 
-  workspaceId,
+    workspaceId,
 
-  contentTypeId,
+    contentTypeId,
 
-  metadata: {},
+    metadata: {},
 
-blocks: [],
+    blocks: [],
 
-  updatedAt: new Date().toISOString(),
-};
+    status: "draft",
+
+    updatedAt: new Date().toISOString(),
+  };
 
   documents.unshift(document);
 
@@ -43,17 +53,26 @@ blocks: [],
   return document;
 }
 
-export function getDocument(id: string) {
-  return getDocuments().find((document) => document.id === id);
+export function getDocument(
+  id: string
+): Document | undefined {
+  return getDocuments().find(
+    (document) => document.id === id
+  );
 }
 
-export function updateDocument(updated: Document) {
+export function updateDocument(
+  updated: Document
+) {
   const documents = getDocuments().map((document) =>
-    document.id === updated.id ? updated : document
+    document.id === updated.id
+      ? updated
+      : document
   );
 
   saveDocuments(documents);
 }
+
 export function getRecentDocuments(): Document[] {
   return getDocuments().sort(
     (a, b) =>
