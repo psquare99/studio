@@ -1,4 +1,5 @@
 import { Document } from "@/lib/models/document";
+
 import {
   createDocument,
   getDocument,
@@ -7,16 +8,22 @@ import {
 } from "@/lib/storage/document-storage";
 
 import { loadSchemaForContentType } from "./schema-service";
-import { EditorDocument } from "./types/editor-document";
+
+import { EditorDocument } from "@/services/types/editor-document";
 
 export function createNewDocument(
   workspaceId: string,
   contentTypeId: string
 ): Document {
-  return createDocument(workspaceId, contentTypeId);
+  return createDocument(
+    workspaceId,
+    contentTypeId
+  );
 }
 
-export function loadDocument(id: string): Document | undefined {
+export function loadDocument(
+  id: string
+): Document | undefined {
   return getDocument(id);
 }
 
@@ -44,7 +51,9 @@ export function loadEditorDocument(
   };
 }
 
-export function saveDocument(document: Document): void {
+export function saveDocument(
+  document: Document
+): void {
   updateDocument(document);
 }
 

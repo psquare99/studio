@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import {
-  loadDocument,
+  loadEditorDocument,
   saveDocument,
 } from "@/services/document-service";
 
 import type { Document } from "@/lib/models/document";
+import type { Schema } from "@/lib/models/schema";
+import type { MetadataField } from "@/lib/models/metadata-field";
 
 export default function DocumentPage() {
   const params = useParams();
@@ -18,9 +20,14 @@ export default function DocumentPage() {
   const [document, setDocument] =
     useState<Document | null>(null);
 
-  const [title, setTitle] = useState("");
-  const [excerpt, setExcerpt] = useState("");
-  const [content, setContent] = useState("");
+  const [schema, setSchema] =
+    useState<Schema | null>(null);
+
+  const [metadata, setMetadata] =
+    useState<Record<string, string>>({});
+
+  const [content, setContent] =
+    useState("");
 
   const [saveStatus, setSaveStatus] = useState<
     "saved" | "saving"
@@ -34,25 +41,29 @@ export default function DocumentPage() {
   const hasLoaded = useRef(false);
 
   useEffect(() => {
-    const loadedDocument = loadDocument(id);
+    const editorDocument =
+      loadEditorDocument(id);
 
-    if (!loadedDocument) {
+    if (!editorDocument) {
       return;
     }
 
+    const {
+      document: loadedDocument,
+      schema: loadedSchema,
+    } = editorDocument;
+
     setDocument(loadedDocument);
+    setSchema(loadedSchema);
 
-    setTitle(
-      loadedDocument.metadata.title ?? ""
-    );
-
-    setExcerpt(
-      loadedDocument.metadata.excerpt ?? ""
-    );
+    setMetadata({
+      ...loadedDocument.metadata,
+    });
 
     const text = loadedDocument.blocks
       .filter(
-        (block) => block.type === "paragraph"
+        (block) =>
+          block.type === "paragraph"
       )
       .map((block) => {
         const data = block.data as {
@@ -69,7 +80,11 @@ export default function DocumentPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!document || !hasLoaded.current) {
+    if (
+      !document ||
+      !schema ||
+      !hasLoaded.current
+    ) {
       return;
     }
 
@@ -104,11 +119,7 @@ export default function DocumentPage() {
         ...document,
 
         metadata: {
-          ...document.metadata,
-
-          title,
-
-          excerpt,
+          ...metadata,
         },
 
         blocks,
@@ -127,7 +138,168 @@ export default function DocumentPage() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [title, excerpt, content]);
+  }, [
+    metadata,
+    content,
+  ]);
+
+  function updateMetadata(
+    fieldId: string,
+    value: string
+  ) {
+    setMetadata((current) => ({
+      ...current,
+      [fieldId]: value,
+    }));
+  }
+
+  function renderMetadataField(
+    field: MetadataField
+  ) {
+    const value =
+      metadata[field.id] ?? "";
+
+    const commonClassName =
+      "w-full border-none outline-none placeholder:text-neutral-300";
+
+    if (field.id === "title") {
+      return (
+        <input
+          key={field.id}
+          value={value}
+          onChange={(event) =>
+            updateMetadata(
+              field.id,
+              event.target.value
+            )
+          }
+          placeholder={
+            field.placeholder ??
+            "Untitled"
+          }
+          required={field.required}
+          className={`${commonClassName} text-6xl font-bold tracking-tight`}
+        />
+      );
+    }
+
+    if (field.id === "excerpt") {
+      return (
+        <input
+          key={field.id}
+          value={value}
+          onChange={(event) =>
+            updateMetadata(
+              field.id,
+              event.target.value
+            )
+          }
+          placeholder={
+            field.placeholder ??
+            "A short description..."
+          }
+          required={field.required}
+          className={`${commonClassName} text-xl text-neutral-500`}
+        />
+      );
+    }
+
+    switch (field.type) {
+      case "number":
+        return (
+          <input
+            key={field.id}
+            type="number"
+            value={value}
+            onChange={(event) =>
+              updateMetadata(
+                field.id,
+                event.target.value
+              )
+            }
+            placeholder={
+              field.placeholder
+            }
+            required={field.required}
+            className={`${commonClassName} text-lg text-neutral-700`}
+          />
+        );
+
+      case "date":
+        return (
+          <input
+            key={field.id}
+            type="date"
+            value={value}
+            onChange={(event) =>
+              updateMetadata(
+                field.id,
+                event.target.value
+              )
+            }
+            required={field.required}
+            className={`${commonClassName} text-lg text-neutral-700`}
+          />
+        );
+
+      case "boolean":
+        return (
+          <label
+            key={field.id}
+            className="flex items-center gap-3 text-sm text-neutral-700"
+          >
+            <input
+              type="checkbox"
+              checked={value === "true"}
+              onChange={(event) =>
+                updateMetadata(
+                  field.id,
+                  event.target.checked
+                    ? "true"
+                    : "false"
+                )
+              }
+            />
+
+            <span>{field.label}</span>
+          </label>
+        );
+
+      case "text":
+      default:
+        return (
+          <div
+            key={field.id}
+            className="space-y-2"
+          >
+            <label className="block text-sm font-medium text-neutral-500">
+              {field.label}
+              {field.required && (
+                <span className="ml-1 text-neutral-400">
+                  *
+                </span>
+              )}
+            </label>
+
+            <input
+              type="text"
+              value={value}
+              onChange={(event) =>
+                updateMetadata(
+                  field.id,
+                  event.target.value
+                )
+              }
+              placeholder={
+                field.placeholder
+              }
+              required={field.required}
+              className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
+            />
+          </div>
+        );
+    }
+  }
 
   async function handlePublish() {
     if (!document) {
@@ -139,6 +311,10 @@ export default function DocumentPage() {
 
       const publishedDocument: Document = {
         ...document,
+
+        metadata: {
+          ...metadata,
+        },
 
         status: "published",
 
@@ -193,7 +369,7 @@ export default function DocumentPage() {
     }
   }
 
-  if (!document) {
+  if (!document || !schema) {
     return (
       <main className="min-h-screen bg-white">
         <div className="mx-auto max-w-3xl px-8 py-24">
@@ -260,28 +436,14 @@ export default function DocumentPage() {
 
         <div className="mt-16">
 
-          <input
-            value={title}
-            onChange={(e) =>
-              setTitle(e.target.value)
-            }
-            placeholder="Untitled"
-            className="w-full border-none text-6xl font-bold tracking-tight outline-none placeholder:text-neutral-300"
-          />
-
-          <input
-            value={excerpt}
-            onChange={(e) =>
-              setExcerpt(e.target.value)
-            }
-            placeholder="A short description..."
-            className="mt-6 w-full border-none text-xl text-neutral-500 outline-none placeholder:text-neutral-300"
-          />
+          {schema.metadata.map(
+            renderMetadataField
+          )}
 
           <textarea
             value={content}
-            onChange={(e) =>
-              setContent(e.target.value)
+            onChange={(event) =>
+              setContent(event.target.value)
             }
             placeholder="Start writing..."
             className="mt-12 min-h-[500px] w-full resize-none border-none text-lg leading-8 text-neutral-700 outline-none placeholder:text-neutral-300"

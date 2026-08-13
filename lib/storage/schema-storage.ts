@@ -7,14 +7,28 @@ const schemas: Schema[] = [
     description: "Personal journal entries",
 
     metadata: [
-      {
-  id: "title",
-  label: "Title",
-  type: "text",
-  required: true,
-  placeholder: "Untitled",
-},
-    ],
+  {
+    id: "title",
+    label: "Title",
+    type: "text",
+    required: true,
+    placeholder: "Untitled",
+  },
+  {
+    id: "excerpt",
+    label: "Excerpt",
+    type: "text",
+    required: false,
+    placeholder: "A short description...",
+  },
+  {
+    id: "category",
+    label: "Category",
+    type: "text",
+    required: false,
+    placeholder: "e.g. dev-logs",
+  },
+],
 
     allowedBlocks: [
       "paragraph",
