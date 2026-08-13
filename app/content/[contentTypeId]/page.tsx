@@ -35,9 +35,18 @@ export default function ContentTypePage() {
     return null;
   }
 
+  const drafts = documents.filter(
+    (document) => document.status === "draft"
+  );
+
+  const published = documents.filter(
+    (document) => document.status === "published"
+  );
+
   return (
     <main className="min-h-screen bg-neutral-50">
       <div className="mx-auto max-w-5xl px-8 py-16">
+
         <div className="flex items-start justify-between gap-8">
           <div>
             <h1 className="text-5xl font-bold">
@@ -64,8 +73,17 @@ export default function ContentTypePage() {
             Drafts
           </h2>
 
-          <DocumentList documents={documents} />
+          <DocumentList documents={drafts} />
         </section>
+
+        <section className="mt-16">
+          <h2 className="text-2xl font-semibold">
+            Published
+          </h2>
+
+          <DocumentList documents={published} />
+        </section>
+
       </div>
     </main>
   );

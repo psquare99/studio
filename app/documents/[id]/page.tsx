@@ -98,6 +98,21 @@ export default function DocumentPage() {
     };
   }, [title, excerpt, content]);
 
+  function handlePublish() {
+    if (!document) {
+      return;
+    }
+
+    const publishedDocument: Document = {
+      ...document,
+      status: "published",
+      updatedAt: new Date().toISOString(),
+    };
+
+    saveDocument(publishedDocument);
+    setDocument(publishedDocument);
+  }
+
   if (!document) {
     return (
       <main className="min-h-screen bg-white">
@@ -122,11 +137,28 @@ export default function DocumentPage() {
             ← Journal
           </Link>
 
-          <span className="text-sm text-neutral-400">
-            {saveStatus === "saving"
-              ? "Saving..."
-              : "Saved"}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-neutral-400">
+              {saveStatus === "saving"
+                ? "Saving..."
+                : "Saved"}
+            </span>
+
+            {document.status === "draft" && (
+              <button
+                onClick={handlePublish}
+                className="rounded-xl bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800"
+              >
+                Publish
+              </button>
+            )}
+
+            {document.status === "published" && (
+              <span className="rounded-xl bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-700">
+                Published
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="mt-16">
