@@ -7,9 +7,12 @@ export default function NewJournalButton() {
   const router = useRouter();
 
   function handleClick() {
-    createNewDocument("the-long-way-home", "journal");
+    const document = createNewDocument(
+  "the-long-way-home",
+  "journal"
+);
 
-    router.push(`/documents/${document.id}`);
+router.push(`/documents/${document.id}`);
   }
 
   return (
