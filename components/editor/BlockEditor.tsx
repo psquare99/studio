@@ -127,6 +127,9 @@ export default function BlockEditor({
   return (
     <div className="mt-12 space-y-8">
       {blocks.map((block) => {
+        /*
+         * PARAGRAPH
+         */
         if (block.type === "paragraph") {
           const data = block.data as {
             text?: string;
@@ -164,6 +167,165 @@ export default function BlockEditor({
           );
         }
 
+        /*
+         * HEADING
+         */
+        if (block.type === "heading") {
+          const data = block.data as {
+            text?: string;
+            level?: number;
+          };
+
+          return (
+            <div
+              key={block.id}
+              className="group relative"
+            >
+              <input
+                value={data.text ?? ""}
+                onChange={(event) =>
+                  updateBlock(
+                    block.id,
+                    {
+                      text: event.target.value,
+                      level:
+                        data.level ?? 2,
+                    }
+                  )
+                }
+                placeholder="Heading..."
+                className="w-full border-none text-3xl font-semibold tracking-tight text-neutral-800 outline-none placeholder:text-neutral-300"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  deleteBlock(block.id)
+                }
+                className="absolute -right-20 top-2 text-xs text-neutral-400 opacity-0 transition hover:text-red-500 group-hover:opacity-100"
+              >
+                Delete
+              </button>
+            </div>
+          );
+        }
+
+        /*
+         * QUOTE
+         */
+        if (block.type === "quote") {
+          const data = block.data as {
+            text?: string;
+          };
+
+          return (
+            <div
+              key={block.id}
+              className="group relative border-l-4 border-neutral-200 pl-6"
+            >
+              <textarea
+                value={data.text ?? ""}
+                onChange={(event) =>
+                  updateBlock(
+                    block.id,
+                    {
+                      text: event.target.value,
+                    }
+                  )
+                }
+                placeholder="Write a quote..."
+                className="min-h-[100px] w-full resize-none border-none bg-transparent text-xl italic leading-8 text-neutral-600 outline-none placeholder:text-neutral-300"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  deleteBlock(block.id)
+                }
+                className="absolute -right-20 top-2 text-xs text-neutral-400 opacity-0 transition hover:text-red-500 group-hover:opacity-100"
+              >
+                Delete
+              </button>
+            </div>
+          );
+        }
+
+        /*
+         * IMAGE
+         */
+        if (block.type === "image") {
+          const data = block.data as {
+            src?: string;
+            alt?: string;
+          };
+
+          return (
+            <div
+              key={block.id}
+              className="group relative space-y-4 rounded-xl border border-neutral-200 p-5"
+            >
+              <div className="text-xs font-medium uppercase tracking-[0.16em] text-neutral-400">
+                Image
+              </div>
+
+              <input
+                type="text"
+                value={data.src ?? ""}
+                onChange={(event) =>
+                  updateBlock(
+                    block.id,
+                    {
+                      src: event.target.value,
+                      alt: data.alt ?? "",
+                    }
+                  )
+                }
+                placeholder="Image URL"
+                className="w-full rounded-lg border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-neutral-400"
+              />
+
+              <input
+                type="text"
+                value={data.alt ?? ""}
+                onChange={(event) =>
+                  updateBlock(
+                    block.id,
+                    {
+                      src: data.src ?? "",
+                      alt: event.target.value,
+                    }
+                  )
+                }
+                placeholder="Alt text"
+                className="w-full rounded-lg border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-neutral-400"
+              />
+
+              {data.src && (
+                <div className="overflow-hidden rounded-lg border border-neutral-200">
+                  <img
+                    src={data.src}
+                    alt={data.alt ?? ""}
+                    className="max-h-[500px] w-full object-contain"
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  deleteBlock(block.id)
+                }
+                className="absolute right-4 top-4 text-xs text-neutral-400 transition hover:text-red-500"
+              >
+                Delete
+              </button>
+            </div>
+          );
+        }
+
+        /*
+         * UNSUPPORTED BLOCK
+         */
         return (
           <div
             key={block.id}
@@ -175,8 +337,8 @@ export default function BlockEditor({
             </div>
 
             <div className="mt-2 text-xs text-neutral-300">
-              This block type will be
-              supported by the editor next.
+              This block type is not yet
+              supported by the editor.
             </div>
 
             <button
