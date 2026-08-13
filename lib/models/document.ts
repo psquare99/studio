@@ -1,3 +1,13 @@
+export interface DocumentMetadata {
+  [key: string]: string;
+}
+
+export interface DocumentBlock {
+  id: string;
+  type: string;
+  data: unknown;
+}
+
 export interface Document {
   id: string;
 
@@ -5,17 +15,9 @@ export interface Document {
 
   contentTypeId: string;
 
-  metadata: Record<string, string>;
+  metadata: DocumentMetadata;
 
   blocks: DocumentBlock[];
 
   updatedAt: string;
-}
-
-export interface DocumentBlock {
-  id: string;
-
-  type: string;
-
-  data: unknown;
 }
