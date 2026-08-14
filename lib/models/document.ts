@@ -1,6 +1,7 @@
 export type DocumentStatus =
   | "draft"
-  | "published";
+  | "published"
+  | "modified";
 
 export interface DocumentMetadata {
   [key: string]: string;

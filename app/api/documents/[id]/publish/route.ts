@@ -6,6 +6,65 @@ import {
   publishDocument,
 } from "@/services/publishing-service";
 
+import {
+  deletePublishedDocument,
+} from "@/services/publishing-service";
+
+export async function DELETE(
+  request: Request
+) {
+  try {
+    const document =
+      (await request.json()) as Document;
+
+    if (!document.id) {
+      return NextResponse.json(
+        {
+          error:
+            "Document ID is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      document.status !== "published" &&
+      document.status !== "modified"
+    ) {
+      return NextResponse.json({
+        success: true,
+        unpublished: false,
+      });
+    }
+
+    deletePublishedDocument(
+      document
+    );
+
+    return NextResponse.json({
+      success: true,
+      unpublished: true,
+    });
+  } catch (error) {
+    console.error(
+      "Deletion failed:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Failed to delete publication.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
 export async function POST(
   request: Request
 ) {

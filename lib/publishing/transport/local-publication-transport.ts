@@ -43,4 +43,26 @@ export class LocalPublicationTransport
 
     return destinationPath;
   }
+
+  remove(
+    contentType: string,
+    slug: string
+  ): void {
+    const destinationPath =
+      path.join(
+        this.destinationRoot,
+        "content",
+        "published",
+        contentType,
+        `${slug}.json`
+      );
+
+    if (
+      fs.existsSync(destinationPath)
+    ) {
+      fs.unlinkSync(
+        destinationPath
+      );
+    }
+  }
 }

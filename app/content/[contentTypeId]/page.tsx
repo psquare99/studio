@@ -5,43 +5,135 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { loadContentTypes } from "@/services/content-type-service";
-import { loadRecentDocuments } from "@/services/document-service";
+import {
+  loadRecentDocuments,
+  removeDocument,
+} from "@/services/document-service";
+
 import DocumentList from "@/components/workspace/DocumentList";
+
 import type { Document } from "@/lib/models/document";
 
-const WORKSPACE_ID = "the-long-way-home";
+const WORKSPACE_ID =
+  "the-long-way-home";
 
 export default function ContentTypePage() {
   const params = useParams();
-  const contentTypeId = params.contentTypeId as string;
 
-  const contentType = loadContentTypes(WORKSPACE_ID).find(
-    (type) => type.id === contentTypeId
-  );
+  const contentTypeId =
+    params.contentTypeId as string;
 
-  const [documents, setDocuments] = useState<Document[]>([]);
-
-  useEffect(() => {
-    const recentDocuments = loadRecentDocuments().filter(
-      (document) =>
-        document.workspaceId === WORKSPACE_ID &&
-        document.contentTypeId === contentTypeId
+  const contentType =
+    loadContentTypes(
+      WORKSPACE_ID
+    ).find(
+      (type) =>
+        type.id ===
+        contentTypeId
     );
 
-    setDocuments(recentDocuments);
+  const [documents, setDocuments] =
+    useState<Document[]>([]);
+
+  useEffect(() => {
+    const recentDocuments =
+      loadRecentDocuments().filter(
+        (document) =>
+          document.workspaceId ===
+            WORKSPACE_ID &&
+          document.contentTypeId ===
+            contentTypeId
+      );
+
+    setDocuments(
+      recentDocuments
+    );
   }, [contentTypeId]);
+
+  async function handleDelete(
+  id: string
+) {
+  const document =
+    documents.find(
+      (item) => item.id === id
+    );
+
+  if (!document) {
+    return;
+  }
+
+  const isPublished =
+    document.status ===
+      "published" ||
+    document.status ===
+      "modified";
+
+  if (isPublished) {
+    try {
+      const response =
+        await fetch(
+          `/api/documents/${id}/publish`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify(
+              document
+            ),
+          }
+        );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to remove published document."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Failed to unpublish document:",
+        error
+      );
+
+      window.alert(
+        "The published post could not be removed from the website. The document was kept in Studio."
+      );
+
+      return;
+    }
+  }
+
+  removeDocument(id);
+
+  setDocuments(
+    (current) =>
+      current.filter(
+        (item) =>
+          item.id !== id
+      )
+  );
+}
 
   if (!contentType) {
     return null;
   }
 
-  const drafts = documents.filter(
-    (document) => document.status === "draft"
-  );
+  const drafts =
+    documents.filter(
+      (document) =>
+        document.status ===
+        "draft"
+    );
 
-  const published = documents.filter(
-    (document) => document.status === "published"
-  );
+  const published =
+    documents.filter(
+      (document) =>
+        document.status ===
+          "published" ||
+        document.status ===
+          "modified"
+    );
 
   return (
     <main className="min-h-screen bg-neutral-50">
@@ -58,7 +150,8 @@ export default function ContentTypePage() {
             </p>
           </div>
 
-          {contentTypeId === "journal" && (
+          {contentTypeId ===
+            "journal" && (
             <Link
               href="/documents/new?type=journal"
               className="rounded-2xl bg-black px-6 py-3 text-white transition hover:bg-neutral-800"
@@ -73,7 +166,12 @@ export default function ContentTypePage() {
             Drafts
           </h2>
 
-          <DocumentList documents={drafts} />
+          <DocumentList
+            documents={drafts}
+            onDelete={
+              handleDelete
+            }
+          />
         </section>
 
         <section className="mt-16">
@@ -81,7 +179,14 @@ export default function ContentTypePage() {
             Published
           </h2>
 
-          <DocumentList documents={published} />
+          <DocumentList
+            documents={
+              published
+            }
+            onDelete={
+              handleDelete
+            }
+          />
         </section>
 
       </div>

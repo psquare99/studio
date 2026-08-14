@@ -49,3 +49,13 @@ export function writePublication(
 
   return filePath;
 }
+export function deletePublication(
+  publication: PublishedDocument
+): void {
+  const filePath =
+    getPublicationPath(publication);
+
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+}

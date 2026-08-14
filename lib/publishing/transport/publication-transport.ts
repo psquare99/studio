@@ -4,4 +4,9 @@ export interface PublicationTransport {
     contentType: string,
     slug: string
   ): string;
+
+  remove(
+    contentType: string,
+    slug: string
+  ): void;
 }

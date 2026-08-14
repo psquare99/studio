@@ -7,28 +7,30 @@ const schemas: Schema[] = [
     description: "Personal journal entries",
 
     metadata: [
-  {
-    id: "title",
-    label: "Title",
-    type: "text",
-    required: true,
-    placeholder: "Untitled",
-  },
-  {
-    id: "excerpt",
-    label: "Excerpt",
-    type: "text",
-    required: false,
-    placeholder: "A short description...",
-  },
-  {
-    id: "category",
-    label: "Category",
-    type: "text",
-    required: false,
-    placeholder: "e.g. dev-logs",
-  },
-],
+      {
+        id: "title",
+        label: "Title",
+        type: "text",
+        required: true,
+        placeholder: "Untitled",
+      },
+
+      {
+        id: "excerpt",
+        label: "Excerpt",
+        type: "text",
+        required: false,
+        placeholder: "A short description...",
+      },
+
+      {
+        id: "category",
+        label: "Category",
+        type: "select",
+        required: false,
+        placeholder: "Choose a category",
+      },
+    ],
 
     allowedBlocks: [
       "paragraph",
@@ -45,18 +47,20 @@ const schemas: Schema[] = [
 
     metadata: [
       {
-  id: "title",
-  label: "Title",
-  type: "text",
-  required: true,
-  placeholder: "Untitled",
-},
+        id: "title",
+        label: "Title",
+        type: "text",
+        required: true,
+        placeholder: "Untitled",
+      },
+
       {
         id: "platform",
         label: "Platform",
         type: "text",
         required: false,
       },
+
       {
         id: "version",
         label: "Version",
@@ -80,18 +84,20 @@ const schemas: Schema[] = [
 
     metadata: [
       {
-  id: "title",
-  label: "Title",
-  type: "text",
-  required: true,
-  placeholder: "Untitled",
-},
+        id: "title",
+        label: "Title",
+        type: "text",
+        required: true,
+        placeholder: "Untitled",
+      },
+
       {
         id: "duration",
         label: "Duration",
         type: "text",
         required: true,
       },
+
       {
         id: "price",
         label: "Price",
@@ -114,12 +120,11 @@ const schemas: Schema[] = [
 
     metadata: [
       {
-  id: "title",
-  label: "Title",
-  type: "text",
-  required: true,
-  placeholder: "Untitled",
-},
+        id: "title",
+        label: "Title",
+        type: "text",
+        required: true,
+      },
     ],
 
     allowedBlocks: [
@@ -130,6 +135,10 @@ const schemas: Schema[] = [
   },
 ];
 
-export function getSchema(id: string): Schema | undefined {
-  return schemas.find((schema) => schema.id === id);
+export function getSchema(
+  id: string
+): Schema | undefined {
+  return schemas.find(
+    (schema) => schema.id === id
+  );
 }

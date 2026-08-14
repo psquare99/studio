@@ -3,15 +3,17 @@ import { Document } from "@/lib/models/document";
 
 interface DocumentListProps {
   documents: Document[];
+  onDelete: (id: string) => void;
 }
 
 export default function DocumentList({
   documents,
+  onDelete,
 }: DocumentListProps) {
   if (documents.length === 0) {
     return (
       <div className="mt-6 rounded-2xl border border-dashed border-neutral-300 p-10 text-neutral-500">
-        No drafts yet.
+        No documents yet.
       </div>
     );
   }
@@ -22,9 +24,20 @@ export default function DocumentList({
         <DraftCard
           key={document.id}
           id={document.id}
-          title={document.metadata.title || "Untitled"}
-          excerpt={document.metadata.excerpt}
-          updatedAt={document.updatedAt}
+          title={
+            document.metadata.title ||
+            "Untitled"
+          }
+          excerpt={
+            document.metadata.excerpt
+          }
+          updatedAt={
+            document.updatedAt
+          }
+          status={
+            document.status
+          }
+          onDelete={onDelete}
         />
       ))}
     </div>

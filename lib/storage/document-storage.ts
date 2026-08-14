@@ -80,3 +80,16 @@ export function getRecentDocuments(): Document[] {
       new Date(a.updatedAt).getTime()
   );
 }
+export function deleteDocument(
+  id: string
+): void {
+  const documents =
+    getDocuments().filter(
+      (document) =>
+        document.id !== id
+    );
+
+  saveDocuments(
+    documents
+  );
+}

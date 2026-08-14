@@ -5,6 +5,7 @@ import {
   getDocument,
   getRecentDocuments,
   updateDocument,
+  deleteDocument,
 } from "@/lib/storage/document-storage";
 
 import { loadSchemaForContentType } from "./schema-service";
@@ -55,6 +56,12 @@ export function saveDocument(
   document: Document
 ): void {
   updateDocument(document);
+}
+
+export function removeDocument(
+  id: string
+): void {
+  deleteDocument(id);
 }
 
 export function loadRecentDocuments(): Document[] {

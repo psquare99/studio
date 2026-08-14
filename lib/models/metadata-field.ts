@@ -3,9 +3,19 @@ export interface MetadataField {
 
   label: string;
 
-  type: "text" | "number" | "date" | "boolean";
+  type:
+    | "text"
+    | "number"
+    | "date"
+    | "boolean"
+    | "select";
 
   required: boolean;
 
   placeholder?: string;
+
+  options?: {
+    value: string;
+    label: string;
+  }[];
 }

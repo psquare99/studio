@@ -4,15 +4,17 @@ import {
   createJournalPublication,
 } from "@/lib/publishing/publication/journal-publication";
 
-import {
-  writePublication,
-} from "@/lib/publishing/publication/publication-writer";
 
 import {
   LocalPublicationTransport,
 } from "@/lib/publishing/transport/local-publication-transport";
 
 import type { PublishedDocument } from "@/lib/publishing/contracts/published-document";
+
+import {
+  deletePublication,
+  writePublication,
+} from "@/lib/publishing/publication/publication-writer";
 
 const WEBSITE_PROJECT_PATH =
   process.env.WEBSITE_PROJECT_PATH;
@@ -63,6 +65,32 @@ export function publishDocument(
 
   return transport.deliver(
     artifactPath,
+    publication.contentType,
+    publication.slug
+  );
+}
+export function deletePublishedDocument(
+  document: Document
+): void {
+  if (!WEBSITE_PROJECT_PATH) {
+    throw new Error(
+      "WEBSITE_PROJECT_PATH is not configured."
+    );
+  }
+
+  const publication =
+    createPublication(document);
+
+  deletePublication(
+    publication
+  );
+
+  const transport =
+    new LocalPublicationTransport(
+      WEBSITE_PROJECT_PATH
+    );
+
+  transport.remove(
     publication.contentType,
     publication.slug
   );

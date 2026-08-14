@@ -9,11 +9,26 @@ import {
   saveDocument,
 } from "@/services/document-service";
 
+import {
+  loadCategories,
+} from "@/services/category-service";
+
+import type { Category } from "@/lib/models/category";
 import type { Document } from "@/lib/models/document";
 import type { Schema } from "@/lib/models/schema";
 import type { MetadataField } from "@/lib/models/metadata-field";
 
 import BlockEditor from "@/components/editor/BlockEditor";
+
+function createContentFingerprint(
+  metadata: Record<string, string>,
+  blocks: Document["blocks"]
+): string {
+  return JSON.stringify({
+    metadata,
+    blocks,
+  });
+}
 
 export default function DocumentPage() {
   const params = useParams();
@@ -25,22 +40,32 @@ export default function DocumentPage() {
   const [schema, setSchema] =
     useState<Schema | null>(null);
 
+  const [categories, setCategories] =
+    useState<Category[]>([]);
+
   const [metadata, setMetadata] =
     useState<Record<string, string>>({});
 
   const [blocks, setBlocks] =
     useState<Document["blocks"]>([]);
 
-  const [saveStatus, setSaveStatus] = useState<
-    "saved" | "saving"
-  >("saved");
+  const [saveStatus, setSaveStatus] =
+    useState<
+      "saved" | "saving"
+    >("saved");
 
   const [publishStatus, setPublishStatus] =
     useState<
-      "idle" | "publishing" | "published" | "error"
+      | "idle"
+      | "publishing"
+      | "published"
+      | "error"
     >("idle");
 
   const hasLoaded = useRef(false);
+
+  const lastSavedFingerprint =
+    useRef<string>("");
 
   useEffect(() => {
     const editorDocument =
@@ -55,8 +80,13 @@ export default function DocumentPage() {
       schema: loadedSchema,
     } = editorDocument;
 
-    setDocument(loadedDocument);
-    setSchema(loadedSchema);
+    setDocument(
+      loadedDocument
+    );
+
+    setSchema(
+      loadedSchema
+    );
 
     setMetadata({
       ...loadedDocument.metadata,
@@ -65,6 +95,21 @@ export default function DocumentPage() {
     setBlocks([
       ...loadedDocument.blocks,
     ]);
+
+    const workspaceCategories =
+      loadCategories(
+        loadedDocument.workspaceId
+      );
+
+    setCategories(
+      workspaceCategories
+    );
+
+    lastSavedFingerprint.current =
+      createContentFingerprint(
+        loadedDocument.metadata,
+        loadedDocument.blocks
+      );
 
     hasLoaded.current = true;
   }, [id]);
@@ -78,33 +123,63 @@ export default function DocumentPage() {
       return;
     }
 
+    const currentFingerprint =
+      createContentFingerprint(
+        metadata,
+        blocks
+      );
+
+    const contentChanged =
+      currentFingerprint !==
+      lastSavedFingerprint.current;
+
     setSaveStatus("saving");
 
-    const timeout = window.setTimeout(() => {
-      const updatedDocument: Document = {
-        ...document,
+    const timeout =
+      window.setTimeout(() => {
+        const nextStatus =
+          document.status ===
+            "published" &&
+          contentChanged
+            ? "modified"
+            : document.status;
 
-        metadata: {
-          ...metadata,
-        },
+        const updatedDocument:
+          Document = {
+            ...document,
 
-        blocks: [
-          ...blocks,
-        ],
+            metadata: {
+              ...metadata,
+            },
 
-        updatedAt:
-          new Date().toISOString(),
-      };
+            blocks: [
+              ...blocks,
+            ],
 
-      saveDocument(updatedDocument);
+            status: nextStatus,
 
-      setDocument(updatedDocument);
+            updatedAt:
+              new Date().toISOString(),
+          };
 
-      setSaveStatus("saved");
-    }, 500);
+        saveDocument(
+          updatedDocument
+        );
+
+        setDocument(
+          updatedDocument
+        );
+
+        lastSavedFingerprint.current =
+          currentFingerprint;
+
+        setSaveStatus("saved");
+      }, 500);
 
     return () => {
-      window.clearTimeout(timeout);
+      window.clearTimeout(
+        timeout
+      );
     };
   }, [
     metadata,
@@ -173,6 +248,70 @@ export default function DocumentPage() {
     }
 
     switch (field.type) {
+      case "select":
+        return (
+          <div
+            key={field.id}
+            className="mt-8 space-y-2"
+          >
+            <label
+              htmlFor={field.id}
+              className="block text-sm font-medium text-neutral-500"
+            >
+              {field.label}
+
+              {field.required && (
+                <span className="ml-1 text-neutral-400">
+                  *
+                </span>
+              )}
+            </label>
+
+            <select
+              id={field.id}
+              value={value}
+              onChange={(event) =>
+                updateMetadata(
+                  field.id,
+                  event.target.value
+                )
+              }
+              required={field.required}
+              className="
+                w-full
+                border-b
+                border-neutral-200
+                bg-transparent
+                pb-2
+                text-lg
+                text-neutral-700
+                outline-none
+              "
+            >
+              <option value="">
+                {field.placeholder ??
+                  "Select an option"}
+              </option>
+
+              {field.id === "category" &&
+                categories.map(
+                  (category) => (
+                    <option
+                      key={
+                        category.id
+                      }
+                      value={
+                        category.slug
+                      }
+                    >
+                      {category.name}
+                    </option>
+                  )
+                )}
+            </select>
+          </div>
+        );
+
       case "number":
         return (
           <div
@@ -181,6 +320,7 @@ export default function DocumentPage() {
           >
             <label className="block text-sm font-medium text-neutral-500">
               {field.label}
+
               {field.required && (
                 <span className="ml-1 text-neutral-400">
                   *
@@ -214,6 +354,7 @@ export default function DocumentPage() {
           >
             <label className="block text-sm font-medium text-neutral-500">
               {field.label}
+
               {field.required && (
                 <span className="ml-1 text-neutral-400">
                   *
@@ -244,7 +385,9 @@ export default function DocumentPage() {
           >
             <input
               type="checkbox"
-              checked={value === "true"}
+              checked={
+                value === "true"
+              }
               onChange={(event) =>
                 updateMetadata(
                   field.id,
@@ -270,6 +413,7 @@ export default function DocumentPage() {
           >
             <label className="block text-sm font-medium text-neutral-500">
               {field.label}
+
               {field.required && (
                 <span className="ml-1 text-neutral-400">
                   *
@@ -303,44 +447,48 @@ export default function DocumentPage() {
     }
 
     try {
-      setPublishStatus("publishing");
+      setPublishStatus(
+        "publishing"
+      );
 
-      const publishedDocument: Document = {
-        ...document,
+      const publishedDocument:
+        Document = {
+          ...document,
 
-        metadata: {
-          ...metadata,
-        },
-
-        blocks: [
-          ...blocks,
-        ],
-
-        status: "published",
-
-        publishedAt:
-          document.publishedAt ??
-          new Date().toISOString(),
-
-        updatedAt:
-          new Date().toISOString(),
-      };
-
-      const response = await fetch(
-        `/api/documents/${id}/publish`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
+          metadata: {
+            ...metadata,
           },
 
-          body: JSON.stringify(
-            publishedDocument
-          ),
-        }
-      );
+          blocks: [
+            ...blocks,
+          ],
+
+          status: "published",
+
+          publishedAt:
+            document.publishedAt ??
+            new Date().toISOString(),
+
+          updatedAt:
+            new Date().toISOString(),
+        };
+
+      const response =
+        await fetch(
+          `/api/documents/${id}/publish`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify(
+              publishedDocument
+            ),
+          }
+        );
 
       if (!response.ok) {
         throw new Error(
@@ -356,6 +504,12 @@ export default function DocumentPage() {
         publishedDocument
       );
 
+      lastSavedFingerprint.current =
+        createContentFingerprint(
+          publishedDocument.metadata,
+          publishedDocument.blocks
+        );
+
       setPublishStatus(
         "published"
       );
@@ -365,7 +519,9 @@ export default function DocumentPage() {
         error
       );
 
-      setPublishStatus("error");
+      setPublishStatus(
+        "error"
+      );
     }
   }
 
@@ -381,10 +537,21 @@ export default function DocumentPage() {
     );
   }
 
+  const actionLabel =
+    document.status ===
+    "modified"
+      ? "Update"
+      : "Publish";
+
+  const actionProgressLabel =
+    document.status ===
+    "modified"
+      ? "Updating..."
+      : "Publishing...";
+
   return (
     <main className="min-h-screen bg-white">
       <div className="mx-auto max-w-3xl px-8 py-12">
-
         <div className="flex items-center justify-between">
           <Link
             href="/content/journal"
@@ -395,14 +562,22 @@ export default function DocumentPage() {
 
           <div className="flex items-center gap-4">
             <span className="text-sm text-neutral-400">
-              {saveStatus === "saving"
+              {saveStatus ===
+              "saving"
                 ? "Saving..."
                 : "Saved"}
             </span>
 
-            {document.status === "draft" && (
+            {(
+              document.status ===
+                "draft" ||
+              document.status ===
+                "modified"
+            ) && (
               <button
-                onClick={handlePublish}
+                onClick={
+                  handlePublish
+                }
                 disabled={
                   publishStatus ===
                   "publishing"
@@ -411,31 +586,40 @@ export default function DocumentPage() {
               >
                 {publishStatus ===
                 "publishing"
-                  ? "Publishing..."
-                  : "Publish"}
+                  ? actionProgressLabel
+                  : actionLabel}
               </button>
             )}
 
             {document.status ===
               "published" && (
               <span className="rounded-xl bg-neutral-100 px-5 py-2.5 text-sm font-medium text-neutral-700">
-                {publishStatus === "error"
+                {publishStatus ===
+                "error"
                   ? "Publish failed"
                   : "Published"}
               </span>
             )}
 
-            {publishStatus === "error" &&
-              document.status === "draft" && (
+            {publishStatus ===
+              "error" &&
+              (
+                document.status ===
+                  "draft" ||
+                document.status ===
+                  "modified"
+              ) && (
                 <span className="text-sm text-red-500">
-                  Publish failed
+                  {document.status ===
+                  "modified"
+                    ? "Update failed"
+                    : "Publish failed"}
                 </span>
               )}
           </div>
         </div>
 
         <div className="mt-16">
-
           {schema.metadata.map(
             renderMetadataField
           )}
@@ -445,11 +629,11 @@ export default function DocumentPage() {
             allowedBlocks={
               schema.allowedBlocks
             }
-            onChange={setBlocks}
+            onChange={
+              setBlocks
+            }
           />
-
         </div>
-
       </div>
     </main>
   );
