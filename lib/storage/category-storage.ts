@@ -1,137 +1,172 @@
 import { Category } from "@/lib/models/category";
+import { supabase } from "@/lib/supabase";
 
-const STORAGE_KEY = "studio-categories";
-
-const DEFAULT_CATEGORIES: Category[] = [
+const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
   {
-    id: "dev-logs",
     workspaceId: "the-long-way-home",
     name: "Dev Logs",
     slug: "dev-logs",
   },
   {
-    id: "reflections",
     workspaceId: "the-long-way-home",
     name: "Reflections",
     slug: "reflections",
   },
   {
-    id: "books",
     workspaceId: "the-long-way-home",
     name: "Books",
     slug: "books",
   },
   {
-    id: "travel",
     workspaceId: "the-long-way-home",
     name: "Travel",
     slug: "travel",
   },
   {
-    id: "projects",
     workspaceId: "the-long-way-home",
     name: "Projects",
     slug: "projects",
   },
 ];
 
-function readCategories(): Category[] {
-  const data =
-    localStorage.getItem(STORAGE_KEY);
+function fromRow(row: {
+  id: string;
+  workspace_id: string;
+  name: string;
+  slug: string;
+}): Category {
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    name: row.name,
+    slug: row.slug,
+  };
+}
 
-  if (!data) {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(DEFAULT_CATEGORIES)
+export async function getCategories(
+  workspaceId: string
+): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, workspace_id, name, slug")
+    .eq("workspace_id", workspaceId)
+    .order("name");
+
+  if (error) {
+    throw new Error(
+      `Failed to load categories: ${error.message}`
     );
-
-    return [
-      ...DEFAULT_CATEGORIES,
-    ];
   }
 
-  return JSON.parse(data) as Category[];
+  return (data ?? []).map(fromRow);
 }
 
-function saveCategories(
-  categories: Category[]
-) {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(categories)
-  );
-}
-
-export function getCategories(
-  workspaceId: string
-): Category[] {
-  return readCategories().filter(
-    (category) =>
-      category.workspaceId === workspaceId
-  );
-}
-
-export function getCategory(
+export async function getCategory(
   id: string
-): Category | undefined {
-  return readCategories().find(
-    (category) => category.id === id
-  );
+): Promise<Category | undefined> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, workspace_id, name, slug")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to load category: ${error.message}`
+    );
+  }
+
+  return data ? fromRow(data) : undefined;
 }
 
-export function createCategory(
+export async function createCategory(
   workspaceId: string,
   name: string,
   slug: string
-): Category {
-  const categories =
-    readCategories();
+): Promise<Category> {
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      workspace_id: workspaceId,
+      name,
+      slug,
+    })
+    .select("id, workspace_id, name, slug")
+    .single();
 
-  const category: Category = {
-    id: crypto.randomUUID(),
-    workspaceId,
-    name,
-    slug,
-  };
+  if (error) {
+    throw new Error(
+      `Failed to create category: ${error.message}`
+    );
+  }
 
-  categories.push(category);
-
-  saveCategories(categories);
-
-  return category;
+  return fromRow(data);
 }
 
-export function updateCategory(
+export async function updateCategory(
   updated: Category
-): Category {
-  const categories =
-    readCategories();
+): Promise<Category> {
+  const { data, error } = await supabase
+    .from("categories")
+    .update({
+      workspace_id: updated.workspaceId,
+      name: updated.name,
+      slug: updated.slug,
+    })
+    .eq("id", updated.id)
+    .select("id, workspace_id, name, slug")
+    .single();
 
-  const updatedCategories =
-    categories.map((category) =>
-      category.id === updated.id
-        ? updated
-        : category
+  if (error) {
+    throw new Error(
+      `Failed to update category: ${error.message}`
     );
+  }
 
-  saveCategories(
-    updatedCategories
-  );
-
-  return updated;
+  return fromRow(data);
 }
 
-export function deleteCategory(
+export async function deleteCategory(
   id: string
-) {
-  const categories =
-    readCategories();
+): Promise<void> {
+  const { error } = await supabase
+    .from("categories")
+    .delete()
+    .eq("id", id);
 
-  const remaining =
-    categories.filter(
-      (category) =>
-        category.id !== id
+  if (error) {
+    throw new Error(
+      `Failed to delete category: ${error.message}`
+    );
+  }
+}
+
+export async function seedDefaultCategories(
+  workspaceId: string
+): Promise<void> {
+  const existing =
+    await getCategories(workspaceId);
+
+  if (existing.length > 0) {
+    return;
+  }
+
+  const defaults =
+    DEFAULT_CATEGORIES.map(
+      (category) => ({
+        workspace_id: workspaceId,
+        name: category.name,
+        slug: category.slug,
+      })
     );
 
-  saveCategories(remaining);
+  const { error } = await supabase
+    .from("categories")
+    .insert(defaults);
+
+  if (error) {
+    throw new Error(
+      `Failed to seed categories: ${error.message}`
+    );
+  }
 }

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -30,6 +36,38 @@ function createContentFingerprint(
   });
 }
 
+function parseList(
+  value: string
+): string[] {
+  if (!value.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (item): item is string =>
+          typeof item === "string"
+      );
+    }
+  } catch {
+    return value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function serializeList(
+  items: string[]
+): string {
+  return JSON.stringify(items);
+}
+
 export default function DocumentPage() {
   const params = useParams();
   const id = params.id as string;
@@ -50,9 +88,7 @@ export default function DocumentPage() {
     useState<Document["blocks"]>([]);
 
   const [saveStatus, setSaveStatus] =
-    useState<
-      "saved" | "saving"
-    >("saved");
+    useState<"saved" | "saving">("saved");
 
   const [publishStatus, setPublishStatus] =
     useState<
@@ -68,8 +104,9 @@ export default function DocumentPage() {
     useRef<string>("");
 
   useEffect(() => {
+  async function load() {
     const editorDocument =
-      loadEditorDocument(id);
+      await loadEditorDocument(id);
 
     if (!editorDocument) {
       return;
@@ -80,13 +117,8 @@ export default function DocumentPage() {
       schema: loadedSchema,
     } = editorDocument;
 
-    setDocument(
-      loadedDocument
-    );
-
-    setSchema(
-      loadedSchema
-    );
+    setDocument(loadedDocument);
+    setSchema(loadedSchema);
 
     setMetadata({
       ...loadedDocument.metadata,
@@ -97,13 +129,13 @@ export default function DocumentPage() {
     ]);
 
     const workspaceCategories =
-      loadCategories(
-        loadedDocument.workspaceId
-      );
+  await loadCategories(
+    loadedDocument.workspaceId
+  );
 
-    setCategories(
-      workspaceCategories
-    );
+setCategories(
+  workspaceCategories
+);
 
     lastSavedFingerprint.current =
       createContentFingerprint(
@@ -112,7 +144,10 @@ export default function DocumentPage() {
       );
 
     hasLoaded.current = true;
-  }, [id]);
+  }
+
+  load();
+}, [id]);
 
   useEffect(() => {
     if (
@@ -136,35 +171,33 @@ export default function DocumentPage() {
     setSaveStatus("saving");
 
     const timeout =
-      window.setTimeout(() => {
+  window.setTimeout(async () => {
         const nextStatus =
-          document.status ===
-            "published" &&
+          document.status === "published" &&
           contentChanged
             ? "modified"
             : document.status;
 
-        const updatedDocument:
-          Document = {
-            ...document,
+        const updatedDocument: Document = {
+          ...document,
 
-            metadata: {
-              ...metadata,
-            },
+          metadata: {
+            ...metadata,
+          },
 
-            blocks: [
-              ...blocks,
-            ],
+          blocks: [
+            ...blocks,
+          ],
 
-            status: nextStatus,
+          status: nextStatus,
 
-            updatedAt:
-              new Date().toISOString(),
-          };
+          updatedAt:
+            new Date().toISOString(),
+        };
 
-        saveDocument(
-          updatedDocument
-        );
+       await saveDocument(
+  updatedDocument
+);
 
         setDocument(
           updatedDocument
@@ -177,9 +210,7 @@ export default function DocumentPage() {
       }, 500);
 
     return () => {
-      window.clearTimeout(
-        timeout
-      );
+      window.clearTimeout(timeout);
     };
   }, [
     metadata,
@@ -194,6 +225,58 @@ export default function DocumentPage() {
       ...current,
       [fieldId]: value,
     }));
+  }
+
+  function updateListItem(
+    fieldId: string,
+    index: number,
+    value: string
+  ) {
+    const current =
+      parseList(
+        metadata[fieldId] ?? ""
+      );
+
+    current[index] = value;
+
+    updateMetadata(
+      fieldId,
+      serializeList(current)
+    );
+  }
+
+  function addListItem(
+    fieldId: string
+  ) {
+    const current =
+      parseList(
+        metadata[fieldId] ?? ""
+      );
+
+    updateMetadata(
+      fieldId,
+      serializeList([
+        ...current,
+        "",
+      ])
+    );
+  }
+
+  function removeListItem(
+    fieldId: string,
+    index: number
+  ) {
+    const current =
+      parseList(
+        metadata[fieldId] ?? ""
+      );
+
+    current.splice(index, 1);
+
+    updateMetadata(
+      fieldId,
+      serializeList(current)
+    );
   }
 
   function renderMetadataField(
@@ -226,7 +309,9 @@ export default function DocumentPage() {
       );
     }
 
-    if (field.id === "excerpt") {
+    if (
+      field.id === "tagline"
+    ) {
       return (
         <input
           key={field.id}
@@ -238,8 +323,7 @@ export default function DocumentPage() {
             )
           }
           placeholder={
-            field.placeholder ??
-            "A short description..."
+            field.placeholder
           }
           required={field.required}
           className={`${commonClassName} mt-6 text-xl text-neutral-500`}
@@ -293,7 +377,20 @@ export default function DocumentPage() {
                   "Select an option"}
               </option>
 
-              {field.id === "category" &&
+              {field.options?.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                )
+              )}
+
+              {field.id ===
+                "category" &&
+                !field.options &&
                 categories.map(
                   (category) => (
                     <option
@@ -312,13 +409,16 @@ export default function DocumentPage() {
           </div>
         );
 
-      case "number":
+      case "image":
         return (
           <div
             key={field.id}
             className="mt-8 space-y-2"
           >
-            <label className="block text-sm font-medium text-neutral-500">
+            <label
+              htmlFor={field.id}
+              className="block text-sm font-medium text-neutral-500"
+            >
               {field.label}
 
               {field.required && (
@@ -329,7 +429,8 @@ export default function DocumentPage() {
             </label>
 
             <input
-              type="number"
+              id={field.id}
+              type="text"
               value={value}
               onChange={(event) =>
                 updateMetadata(
@@ -338,13 +439,106 @@ export default function DocumentPage() {
                 )
               }
               placeholder={
-                field.placeholder
+                field.placeholder ??
+                "/images/..."
               }
               required={field.required}
               className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
             />
+
+            {value && (
+              <div className="mt-3 overflow-hidden rounded-xl border border-neutral-200">
+                <img
+                  src={value}
+                  alt=""
+                  className="max-h-64 w-full object-contain"
+                />
+              </div>
+            )}
           </div>
         );
+
+      case "list": {
+        const items =
+          parseList(value);
+
+        return (
+          <div
+            key={field.id}
+            className="mt-8 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-neutral-500">
+                {field.label}
+
+                {field.required && (
+                  <span className="ml-1 text-neutral-400">
+                    *
+                  </span>
+                )}
+              </label>
+
+              <button
+                type="button"
+                onClick={() =>
+                  addListItem(
+                    field.id
+                  )
+                }
+                className="text-sm font-medium text-neutral-700 hover:text-black"
+              >
+                + Add
+              </button>
+            </div>
+
+            {items.map(
+              (item, index) => (
+                <div
+                  key={`${field.id}-${index}`}
+                  className="flex items-center gap-3"
+                >
+                  <input
+                    value={item}
+                    onChange={(
+                      event
+                    ) =>
+                      updateListItem(
+                        field.id,
+                        index,
+                        event.target
+                          .value
+                      )
+                    }
+                    placeholder={
+                      field.placeholder
+                    }
+                    className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeListItem(
+                        field.id,
+                        index
+                      )
+                    }
+                    className="shrink-0 text-sm text-neutral-400 hover:text-red-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )
+            )}
+
+            {items.length === 0 && (
+              <p className="text-sm text-neutral-400">
+                Nothing added yet.
+              </p>
+            )}
+          </div>
+        );
+      }
 
       case "date":
         return (
@@ -354,12 +548,6 @@ export default function DocumentPage() {
           >
             <label className="block text-sm font-medium text-neutral-500">
               {field.label}
-
-              {field.required && (
-                <span className="ml-1 text-neutral-400">
-                  *
-                </span>
-              )}
             </label>
 
             <input
@@ -411,7 +599,10 @@ export default function DocumentPage() {
             key={field.id}
             className="mt-8 space-y-2"
           >
-            <label className="block text-sm font-medium text-neutral-500">
+            <label
+              htmlFor={field.id}
+              className="block text-sm font-medium text-neutral-500"
+            >
               {field.label}
 
               {field.required && (
@@ -422,6 +613,7 @@ export default function DocumentPage() {
             </label>
 
             <input
+              id={field.id}
               type="text"
               value={value}
               onChange={(event) =>
@@ -495,10 +687,9 @@ export default function DocumentPage() {
           "Publishing request failed."
         );
       }
-
-      saveDocument(
-        publishedDocument
-      );
+await saveDocument(
+  publishedDocument
+);
 
       setDocument(
         publishedDocument
@@ -554,10 +745,11 @@ export default function DocumentPage() {
       <div className="mx-auto max-w-3xl px-8 py-12">
         <div className="flex items-center justify-between">
           <Link
-            href="/content/journal"
+            href={`/content/${document.contentTypeId}`}
             className="text-sm text-neutral-500 transition hover:text-black"
           >
-            ← Journal
+            ←{" "}
+            {schema.name}
           </Link>
 
           <div className="flex items-center gap-4">
@@ -624,15 +816,18 @@ export default function DocumentPage() {
             renderMetadataField
           )}
 
-          <BlockEditor
-            blocks={blocks}
-            allowedBlocks={
-              schema.allowedBlocks
-            }
-            onChange={
-              setBlocks
-            }
-          />
+          {schema.allowedBlocks
+            .length > 0 && (
+            <BlockEditor
+              blocks={blocks}
+              allowedBlocks={
+                schema.allowedBlocks
+              }
+              onChange={
+                setBlocks
+              }
+            />
+          )}
         </div>
       </div>
     </main>

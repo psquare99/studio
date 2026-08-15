@@ -4,6 +4,9 @@ import {
   createJournalPublication,
 } from "@/lib/publishing/publication/journal-publication";
 
+import {
+  createProjectPublication,
+} from "@/lib/publishing/publication/project-publication";
 
 import {
   LocalPublicationTransport,
@@ -22,9 +25,18 @@ const WEBSITE_PROJECT_PATH =
 export function createPublication(
   document: Document
 ): PublishedDocument {
-  switch (document.contentTypeId) {
+  switch (
+    document.contentTypeId
+  ) {
     case "journal":
-      return createJournalPublication(document);
+      return createJournalPublication(
+        document
+      );
+
+    case "project":
+      return createProjectPublication(
+        document
+      );
 
     default:
       throw new Error(
@@ -53,10 +65,14 @@ export function publishDocument(
   }
 
   const publication =
-    createPublication(document);
+    createPublication(
+      document
+    );
 
   const artifactPath =
-    writePublication(publication);
+    writePublication(
+      publication
+    );
 
   const transport =
     new LocalPublicationTransport(
@@ -69,6 +85,7 @@ export function publishDocument(
     publication.slug
   );
 }
+
 export function deletePublishedDocument(
   document: Document
 ): void {
@@ -79,7 +96,9 @@ export function deletePublishedDocument(
   }
 
   const publication =
-    createPublication(document);
+    createPublication(
+      document
+    );
 
   deletePublication(
     publication

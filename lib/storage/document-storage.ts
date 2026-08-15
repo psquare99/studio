@@ -1,35 +1,127 @@
-import { Document } from "@/lib/models/document";
+import type { Document } from "@/lib/models/document";
 
-const STORAGE_KEY = "studio-documents";
+import { supabase } from "@/lib/supabase";
 
-export function getDocuments(): Document[] {
-  const data = localStorage.getItem(STORAGE_KEY);
-
-  if (!data) {
-    return [];
+function fromDatabaseRow(
+  row: {
+    id: string;
+    workspace_id: string;
+    content_type_id: string;
+    metadata: unknown;
+    blocks: unknown;
+    status: string;
+    updated_at: string;
+    published_at: string | null;
   }
+): Document {
+  return {
+    id: row.id,
 
-  const documents = JSON.parse(data) as Document[];
+    workspaceId:
+      row.workspace_id,
 
-  return documents.map((document) => ({
-    ...document,
-    status: document.status ?? "draft",
-  }));
+    contentTypeId:
+      row.content_type_id,
+
+    metadata:
+      (row.metadata as Document["metadata"]) ??
+      {},
+
+    blocks:
+      (row.blocks as Document["blocks"]) ??
+      [],
+
+    status:
+      row.status as Document["status"],
+
+    updatedAt:
+      row.updated_at,
+
+    ...(row.published_at
+      ? {
+          publishedAt:
+            row.published_at,
+        }
+      : {}),
+  };
 }
 
-export function saveDocuments(documents: Document[]) {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(documents)
+function toDatabaseRow(
+  document: Document
+) {
+  return {
+    id: document.id,
+
+    workspace_id:
+      document.workspaceId,
+
+    content_type_id:
+      document.contentTypeId,
+
+    metadata:
+      document.metadata,
+
+    blocks:
+      document.blocks,
+
+    status:
+      document.status,
+
+    updated_at:
+      document.updatedAt,
+
+    published_at:
+      document.publishedAt ??
+      null,
+  };
+}
+
+export async function getDocuments(): Promise<Document[]> {
+  const { data, error } =
+    await supabase
+      .from("documents")
+      .select("*")
+      .order("updated_at", {
+        ascending: false,
+      });
+
+  if (error) {
+    throw new Error(
+      `Failed to load documents: ${error.message}`
+    );
+  }
+
+  return (data ?? []).map(
+    fromDatabaseRow
   );
 }
 
-export function createDocument(
+export async function saveDocuments(
+  documents: Document[]
+): Promise<void> {
+  if (documents.length === 0) {
+    return;
+  }
+
+  const rows =
+    documents.map(toDatabaseRow);
+
+  const { error } =
+    await supabase
+      .from("documents")
+      .upsert(rows);
+
+  if (error) {
+    throw new Error(
+      `Failed to save documents: ${error.message}`
+    );
+  }
+}
+
+export async function createDocument(
   workspaceId: string,
   contentTypeId: string
-): Document {
-  const documents = getDocuments();
-
+): Promise<Document> {
   const document: Document = {
     id: crypto.randomUUID(),
 
@@ -43,53 +135,85 @@ export function createDocument(
 
     status: "draft",
 
-    updatedAt: new Date().toISOString(),
+    updatedAt:
+      new Date().toISOString(),
   };
 
-  documents.unshift(document);
+  const { data, error } =
+    await supabase
+      .from("documents")
+      .insert(
+        toDatabaseRow(document)
+      )
+      .select()
+      .single();
 
-  saveDocuments(documents);
-
-  return document;
-}
-
-export function getDocument(
-  id: string
-): Document | undefined {
-  return getDocuments().find(
-    (document) => document.id === id
-  );
-}
-
-export function updateDocument(
-  updated: Document
-) {
-  const documents = getDocuments().map((document) =>
-    document.id === updated.id
-      ? updated
-      : document
-  );
-
-  saveDocuments(documents);
-}
-
-export function getRecentDocuments(): Document[] {
-  return getDocuments().sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() -
-      new Date(a.updatedAt).getTime()
-  );
-}
-export function deleteDocument(
-  id: string
-): void {
-  const documents =
-    getDocuments().filter(
-      (document) =>
-        document.id !== id
+  if (error) {
+    throw new Error(
+      `Failed to create document: ${error.message}`
     );
+  }
 
-  saveDocuments(
-    documents
-  );
+  return fromDatabaseRow(data);
+}
+
+export async function getDocument(
+  id: string
+): Promise<Document | undefined> {
+  const { data, error } =
+    await supabase
+      .from("documents")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to load document: ${error.message}`
+    );
+  }
+
+  if (!data) {
+    return undefined;
+  }
+
+  return fromDatabaseRow(data);
+}
+
+export async function updateDocument(
+  updated: Document
+): Promise<void> {
+  const { error } =
+    await supabase
+      .from("documents")
+      .update(
+        toDatabaseRow(updated)
+      )
+      .eq("id", updated.id);
+
+  if (error) {
+    throw new Error(
+      `Failed to update document: ${error.message}`
+    );
+  }
+}
+
+export async function deleteDocument(
+  id: string
+): Promise<void> {
+  const { error } =
+    await supabase
+      .from("documents")
+      .delete()
+      .eq("id", id);
+
+  if (error) {
+    throw new Error(
+      `Failed to delete document: ${error.message}`
+    );
+  }
+}
+
+export async function getRecentDocuments(): Promise<Document[]> {
+  return getDocuments();
 }

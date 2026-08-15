@@ -12,12 +12,19 @@ export default function NewDocumentPage() {
     const params = new URLSearchParams(window.location.search);
     const contentTypeId = params.get("type") ?? "journal";
 
-    const document = createNewDocument(
+    async function create() {
+  const document =
+    await createNewDocument(
       "the-long-way-home",
       contentTypeId
     );
 
-    router.replace(`/documents/${document.id}`);
+  router.replace(
+    `/documents/${document.id}`
+  );
+}
+
+create();
   }, [router]);
 
   return (

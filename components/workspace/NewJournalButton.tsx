@@ -6,13 +6,16 @@ import { createNewDocument } from "@/services/document-service";
 export default function NewJournalButton() {
   const router = useRouter();
 
-  function handleClick() {
-    const document = createNewDocument(
-  "the-long-way-home",
-  "journal"
-);
+  async function handleClick() {
+    const document =
+  await createNewDocument(
+    "the-long-way-home",
+    "journal"
+  );
 
-router.push(`/documents/${document.id}`);
+router.push(
+  `/documents/${document.id}`
+);
   }
 
   return (

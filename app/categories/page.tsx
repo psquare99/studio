@@ -44,12 +44,19 @@ export default function CategoriesPage() {
     useState("");
 
   useEffect(() => {
-    setCategories(
-      loadCategories(
+  async function load() {
+    const workspaceCategories =
+      await loadCategories(
         WORKSPACE_ID
-      )
+      );
+
+    setCategories(
+      workspaceCategories
     );
-  }, []);
+  }
+
+  load();
+}, []);
 
   const editingCategory =
     useMemo(
@@ -65,9 +72,9 @@ export default function CategoriesPage() {
       ]
     );
 
-  function handleCreate(
-    event: React.FormEvent
-  ) {
+  async function handleCreate(
+  event: React.FormEvent
+) {
     event.preventDefault();
 
     const trimmedName =
@@ -106,11 +113,11 @@ export default function CategoriesPage() {
     }
 
     const category =
-      addCategory(
-        WORKSPACE_ID,
-        trimmedName,
-        slug
-      );
+  await addCategory(
+    WORKSPACE_ID,
+    trimmedName,
+    slug
+  );
 
     setCategories(
       (current) => [
@@ -143,9 +150,9 @@ export default function CategoriesPage() {
     setError("");
   }
 
-  function saveEdit(
-    category: Category
-  ) {
+  async function saveEdit(
+  category: Category
+) {
     const trimmedName =
       editName.trim();
 
@@ -183,9 +190,9 @@ export default function CategoriesPage() {
         slug,
       };
 
-    editCategory(
-      updatedCategory
-    );
+    await editCategory(
+  updatedCategory
+);
 
     setCategories(
       (current) =>
@@ -201,9 +208,9 @@ export default function CategoriesPage() {
     cancelEditing();
   }
 
-  function handleDelete(
-    category: Category
-  ) {
+  async function handleDelete(
+  category: Category
+) {
     const confirmed =
       window.confirm(
         `Delete "${category.name}"?`
@@ -213,9 +220,9 @@ export default function CategoriesPage() {
       return;
     }
 
-    removeCategory(
-      category.id
-    );
+    await removeCategory(
+  category.id
+);
 
     setCategories(
       (current) =>

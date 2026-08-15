@@ -10,28 +10,28 @@ import {
 
 import { loadSchemaForContentType } from "./schema-service";
 
-import { EditorDocument } from "@/services/types/editor-document";
+import type { EditorDocument } from "@/services/types/editor-document";
 
-export function createNewDocument(
+export async function createNewDocument(
   workspaceId: string,
   contentTypeId: string
-): Document {
+): Promise<Document> {
   return createDocument(
     workspaceId,
     contentTypeId
   );
 }
 
-export function loadDocument(
+export async function loadDocument(
   id: string
-): Document | undefined {
+): Promise<Document | undefined> {
   return getDocument(id);
 }
 
-export function loadEditorDocument(
+export async function loadEditorDocument(
   id: string
-): EditorDocument | undefined {
-  const document = getDocument(id);
+): Promise<EditorDocument | undefined> {
+  const document = await getDocument(id);
 
   if (!document) {
     return undefined;
@@ -52,18 +52,18 @@ export function loadEditorDocument(
   };
 }
 
-export function saveDocument(
+export async function saveDocument(
   document: Document
-): void {
-  updateDocument(document);
+): Promise<void> {
+  await updateDocument(document);
 }
 
-export function removeDocument(
+export async function removeDocument(
   id: string
-): void {
-  deleteDocument(id);
+): Promise<void> {
+  await deleteDocument(id);
 }
 
-export function loadRecentDocuments(): Document[] {
+export async function loadRecentDocuments(): Promise<Document[]> {
   return getRecentDocuments();
 }

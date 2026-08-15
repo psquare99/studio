@@ -5,10 +5,11 @@ export interface MetadataField {
 
   type:
     | "text"
-    | "number"
     | "date"
     | "boolean"
-    | "select";
+    | "select"
+    | "image"
+    | "list";
 
   required: boolean;
 

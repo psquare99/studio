@@ -9,13 +9,7 @@ export interface PublishedDocument {
 
   publishedAt: string;
 
-  metadata: {
-    title: string;
-    excerpt?: string;
-    category?: string;
-    location?: string;
-    featured?: boolean;
-  };
+  metadata: Record<string, unknown>;
 
   blocks: PublishedBlock[];
 }

@@ -106,12 +106,12 @@ export async function POST(
       publicationPath,
     });
   } catch (error) {
-    console.error(
-      "Publishing failed:",
-      error
-    );
+  console.error(
+    "Publishing failed:",
+    error
+  );
 
-    return NextResponse.json(
+  return NextResponse.json(
       {
         error:
           "Failed to publish document.",

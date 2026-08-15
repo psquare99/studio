@@ -35,9 +35,13 @@ export default function ContentTypePage() {
   const [documents, setDocuments] =
     useState<Document[]>([]);
 
-  useEffect(() => {
+ useEffect(() => {
+  async function loadDocuments() {
     const recentDocuments =
-      loadRecentDocuments().filter(
+      await loadRecentDocuments();
+
+    const filteredDocuments =
+      recentDocuments.filter(
         (document) =>
           document.workspaceId ===
             WORKSPACE_ID &&
@@ -46,9 +50,12 @@ export default function ContentTypePage() {
       );
 
     setDocuments(
-      recentDocuments
+      filteredDocuments
     );
-  }, [contentTypeId]);
+  }
+
+  loadDocuments();
+}, [contentTypeId]);
 
   async function handleDelete(
   id: string
@@ -104,8 +111,7 @@ export default function ContentTypePage() {
     }
   }
 
-  removeDocument(id);
-
+  await removeDocument(id);
   setDocuments(
     (current) =>
       current.filter(
@@ -150,15 +156,12 @@ export default function ContentTypePage() {
             </p>
           </div>
 
-          {contentTypeId ===
-            "journal" && (
-            <Link
-              href="/documents/new?type=journal"
-              className="rounded-2xl bg-black px-6 py-3 text-white transition hover:bg-neutral-800"
-            >
-              + New Journal
-            </Link>
-          )}
+          <Link
+  href={`/documents/new?type=${contentTypeId}`}
+  className="rounded-2xl bg-black px-6 py-3 text-white transition hover:bg-neutral-800"
+>
+  + New {contentType.name}
+</Link>
         </div>
 
         <section className="mt-16">

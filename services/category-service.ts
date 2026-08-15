@@ -6,21 +6,19 @@ import {
   updateCategory,
 } from "@/lib/storage/category-storage";
 
-export function loadCategories(
+export async function loadCategories(
   workspaceId: string
 ) {
-  return getCategories(
-    workspaceId
-  );
+  return getCategories(workspaceId);
 }
 
-export function loadCategory(
+export async function loadCategory(
   id: string
 ) {
   return getCategory(id);
 }
 
-export function addCategory(
+export async function addCategory(
   workspaceId: string,
   name: string,
   slug: string
@@ -32,18 +30,16 @@ export function addCategory(
   );
 }
 
-export function editCategory(
+export async function editCategory(
   category: Parameters<
     typeof updateCategory
   >[0]
 ) {
-  return updateCategory(
-    category
-  );
+  return updateCategory(category);
 }
 
-export function removeCategory(
+export async function removeCategory(
   id: string
 ) {
-  deleteCategory(id);
+  return deleteCategory(id);
 }
