@@ -25,12 +25,15 @@ export default function DocumentList({
           key={document.id}
           id={document.id}
           title={
-            document.metadata.title ||
-            "Untitled"
-          }
+  typeof document.metadata.title === "string"
+    ? document.metadata.title
+    : "Untitled"
+}
           excerpt={
-            document.metadata.excerpt
-          }
+  typeof document.metadata.excerpt === "string"
+    ? document.metadata.excerpt
+    : undefined
+}
           updatedAt={
             document.updatedAt
           }

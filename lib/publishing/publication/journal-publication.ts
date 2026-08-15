@@ -1,6 +1,14 @@
 import type { Document } from "@/lib/models/document";
 import type { PublishedDocument } from "../contracts/published-document";
 
+function getText(
+  value: Document["metadata"][string]
+): string {
+  return typeof value === "string"
+    ? value.trim()
+    : "";
+}
+
 export function createJournalPublication(
   document: Document
 ): PublishedDocument {
@@ -16,7 +24,10 @@ export function createJournalPublication(
     );
   }
 
-  const title = document.metadata.title?.trim();
+  const title =
+    getText(
+      document.metadata.title
+    );
 
   if (!title) {
     throw new Error(
@@ -25,7 +36,9 @@ export function createJournalPublication(
   }
 
   const slug =
-    document.metadata.slug?.trim() ||
+    getText(
+      document.metadata.slug
+    ) ||
     title
       .toLowerCase()
       .trim()
@@ -38,6 +51,25 @@ export function createJournalPublication(
     );
   }
 
+  const excerpt =
+    getText(
+      document.metadata.excerpt
+    );
+
+  const category =
+    getText(
+      document.metadata.category
+    );
+
+  const location =
+    getText(
+      document.metadata.location
+    );
+
+  const featured =
+    document.metadata.featured === true ||
+    document.metadata.featured === "true";
+
   return {
     contractVersion: "0.1",
 
@@ -48,46 +80,45 @@ export function createJournalPublication(
     slug,
 
     publishedAt:
-  document.publishedAt ??
-  document.updatedAt,
+      document.publishedAt ??
+      document.updatedAt,
 
     metadata: {
       title,
 
-      ...(document.metadata.excerpt
+      ...(excerpt
         ? {
-            excerpt:
-              document.metadata.excerpt.trim(),
+            excerpt,
           }
         : {}),
 
-      ...(document.metadata.category
+      ...(category
         ? {
-            category:
-              document.metadata.category.trim(),
+            category,
           }
         : {}),
 
-      ...(document.metadata.location
+      ...(location
         ? {
-            location:
-              document.metadata.location.trim(),
+            location,
           }
         : {}),
 
-      ...(document.metadata.featured === "true"
+      ...(featured
         ? {
             featured: true,
           }
         : {}),
     },
 
-    blocks: document.blocks.map((block) => ({
-      id: block.id,
+    blocks: document.blocks.map(
+      (block) => ({
+        id: block.id,
 
-      type: block.type,
+        type: block.type,
 
-      data: block.data,
-    })),
+        data: block.data,
+      })
+    ),
   };
 }

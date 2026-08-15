@@ -4,7 +4,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ChangeEvent,
 } from "react";
 
 import Link from "next/link";
@@ -27,7 +26,7 @@ import type { MetadataField } from "@/lib/models/metadata-field";
 import BlockEditor from "@/components/editor/BlockEditor";
 
 function createContentFingerprint(
-  metadata: Record<string, string>,
+  metadata: Document["metadata"],
   blocks: Document["blocks"]
 ): string {
   return JSON.stringify({
@@ -37,14 +36,26 @@ function createContentFingerprint(
 }
 
 function parseList(
-  value: string
+  value: unknown
 ): string[] {
+  if (Array.isArray(value)) {
+    return value.filter(
+      (item): item is string =>
+        typeof item === "string"
+    );
+  }
+
+  if (typeof value !== "string") {
+    return [];
+  }
+
   if (!value.trim()) {
     return [];
   }
 
   try {
-    const parsed = JSON.parse(value);
+    const parsed =
+      JSON.parse(value);
 
     if (Array.isArray(parsed)) {
       return parsed.filter(
@@ -64,13 +75,23 @@ function parseList(
 
 function serializeList(
   items: string[]
+): string[] {
+  return items;
+}
+
+function stringValue(
+  value: unknown
 ): string {
-  return JSON.stringify(items);
+  return typeof value === "string"
+    ? value
+    : "";
 }
 
 export default function DocumentPage() {
   const params = useParams();
-  const id = params.id as string;
+
+  const id =
+    params.id as string;
 
   const [document, setDocument] =
     useState<Document | null>(null);
@@ -82,13 +103,15 @@ export default function DocumentPage() {
     useState<Category[]>([]);
 
   const [metadata, setMetadata] =
-    useState<Record<string, string>>({});
+    useState<Document["metadata"]>({});
 
   const [blocks, setBlocks] =
     useState<Document["blocks"]>([]);
 
   const [saveStatus, setSaveStatus] =
-    useState<"saved" | "saving">("saved");
+    useState<
+      "saved" | "saving"
+    >("saved");
 
   const [publishStatus, setPublishStatus] =
     useState<
@@ -98,56 +121,64 @@ export default function DocumentPage() {
       | "error"
     >("idle");
 
-  const hasLoaded = useRef(false);
+  const hasLoaded =
+    useRef(false);
 
   const lastSavedFingerprint =
     useRef<string>("");
 
   useEffect(() => {
-  async function load() {
-    const editorDocument =
-      await loadEditorDocument(id);
+    async function load() {
+      const editorDocument =
+        await loadEditorDocument(id);
 
-    if (!editorDocument) {
-      return;
-    }
+      if (!editorDocument) {
+        return;
+      }
 
-    const {
-      document: loadedDocument,
-      schema: loadedSchema,
-    } = editorDocument;
+      const {
+        document:
+          loadedDocument,
+        schema:
+          loadedSchema,
+      } = editorDocument;
 
-    setDocument(loadedDocument);
-    setSchema(loadedSchema);
-
-    setMetadata({
-      ...loadedDocument.metadata,
-    });
-
-    setBlocks([
-      ...loadedDocument.blocks,
-    ]);
-
-    const workspaceCategories =
-  await loadCategories(
-    loadedDocument.workspaceId
-  );
-
-setCategories(
-  workspaceCategories
-);
-
-    lastSavedFingerprint.current =
-      createContentFingerprint(
-        loadedDocument.metadata,
-        loadedDocument.blocks
+      setDocument(
+        loadedDocument
       );
 
-    hasLoaded.current = true;
-  }
+      setSchema(
+        loadedSchema
+      );
 
-  load();
-}, [id]);
+      setMetadata({
+        ...loadedDocument.metadata,
+      });
+
+      setBlocks([
+        ...loadedDocument.blocks,
+      ]);
+
+      const workspaceCategories =
+        await loadCategories(
+          loadedDocument.workspaceId
+        );
+
+      setCategories(
+        workspaceCategories
+      );
+
+      lastSavedFingerprint.current =
+        createContentFingerprint(
+          loadedDocument.metadata,
+          loadedDocument.blocks
+        );
+
+      hasLoaded.current = true;
+    }
+
+    load();
+  }, [id]);
 
   useEffect(() => {
     if (
@@ -171,46 +202,56 @@ setCategories(
     setSaveStatus("saving");
 
     const timeout =
-  window.setTimeout(async () => {
-        const nextStatus =
-          document.status === "published" &&
-          contentChanged
-            ? "modified"
-            : document.status;
+      window.setTimeout(
+        async () => {
+          const nextStatus =
+            document.status ===
+              "published" &&
+            contentChanged
+              ? "modified"
+              : document.status;
 
-        const updatedDocument: Document = {
-          ...document,
+          const updatedDocument:
+            Document = {
+            ...document,
 
-          metadata: {
-            ...metadata,
-          },
+            metadata: {
+              ...metadata,
+            },
 
-          blocks: [
-            ...blocks,
-          ],
+            blocks: [
+              ...blocks,
+            ],
 
-          status: nextStatus,
+            status:
+              nextStatus,
 
-          updatedAt:
-            new Date().toISOString(),
-        };
+            updatedAt:
+              new Date().toISOString(),
+          };
 
-       await saveDocument(
-  updatedDocument
-);
+          await saveDocument(
+            updatedDocument
+          );
 
-        setDocument(
-          updatedDocument
-        );
+          setDocument(
+            updatedDocument
+          );
 
-        lastSavedFingerprint.current =
-          currentFingerprint;
+          lastSavedFingerprint.current =
+            currentFingerprint;
 
-        setSaveStatus("saved");
-      }, 500);
+          setSaveStatus(
+            "saved"
+          );
+        },
+        500
+      );
 
     return () => {
-      window.clearTimeout(timeout);
+      window.clearTimeout(
+        timeout
+      );
     };
   }, [
     metadata,
@@ -219,12 +260,16 @@ setCategories(
 
   function updateMetadata(
     fieldId: string,
-    value: string
+    value:
+      Document["metadata"][string]
   ) {
-    setMetadata((current) => ({
-      ...current,
-      [fieldId]: value,
-    }));
+    setMetadata(
+      (current) => ({
+        ...current,
+        [fieldId]:
+          value,
+      })
+    );
   }
 
   function updateListItem(
@@ -234,14 +279,17 @@ setCategories(
   ) {
     const current =
       parseList(
-        metadata[fieldId] ?? ""
+        metadata[fieldId]
       );
 
-    current[index] = value;
+    current[index] =
+      value;
 
     updateMetadata(
       fieldId,
-      serializeList(current)
+      serializeList(
+        current
+      )
     );
   }
 
@@ -250,15 +298,15 @@ setCategories(
   ) {
     const current =
       parseList(
-        metadata[fieldId] ?? ""
+        metadata[fieldId]
       );
 
     updateMetadata(
       fieldId,
-      serializeList([
+      [
         ...current,
         "",
-      ])
+      ]
     );
   }
 
@@ -268,14 +316,17 @@ setCategories(
   ) {
     const current =
       parseList(
-        metadata[fieldId] ?? ""
+        metadata[fieldId]
       );
 
-    current.splice(index, 1);
+    current.splice(
+      index,
+      1
+    );
 
     updateMetadata(
       fieldId,
-      serializeList(current)
+      current
     );
   }
 
@@ -283,16 +334,20 @@ setCategories(
     field: MetadataField
   ) {
     const value =
-      metadata[field.id] ?? "";
+      metadata[field.id];
 
     const commonClassName =
       "w-full border-none outline-none placeholder:text-neutral-300";
 
-    if (field.id === "title") {
+    if (
+      field.id === "title"
+    ) {
       return (
         <input
           key={field.id}
-          value={value}
+          value={stringValue(
+            value
+          )}
           onChange={(event) =>
             updateMetadata(
               field.id,
@@ -303,7 +358,9 @@ setCategories(
             field.placeholder ??
             "Untitled"
           }
-          required={field.required}
+          required={
+            field.required
+          }
           className={`${commonClassName} text-6xl font-bold tracking-tight`}
         />
       );
@@ -315,7 +372,9 @@ setCategories(
       return (
         <input
           key={field.id}
-          value={value}
+          value={stringValue(
+            value
+          )}
           onChange={(event) =>
             updateMetadata(
               field.id,
@@ -325,7 +384,9 @@ setCategories(
           placeholder={
             field.placeholder
           }
-          required={field.required}
+          required={
+            field.required
+          }
           className={`${commonClassName} mt-6 text-xl text-neutral-500`}
         />
       );
@@ -353,14 +414,18 @@ setCategories(
 
             <select
               id={field.id}
-              value={value}
+              value={stringValue(
+                value
+              )}
               onChange={(event) =>
                 updateMetadata(
                   field.id,
                   event.target.value
                 )
               }
-              required={field.required}
+              required={
+                field.required
+              }
               className="
                 w-full
                 border-b
@@ -380,10 +445,16 @@ setCategories(
               {field.options?.map(
                 (option) => (
                   <option
-                    key={option.value}
-                    value={option.value}
+                    key={
+                      option.value
+                    }
+                    value={
+                      option.value
+                    }
                   >
-                    {option.label}
+                    {
+                      option.label
+                    }
                   </option>
                 )
               )}
@@ -401,7 +472,9 @@ setCategories(
                         category.slug
                       }
                     >
-                      {category.name}
+                      {
+                        category.name
+                      }
                     </option>
                   )
                 )}
@@ -409,7 +482,10 @@ setCategories(
           </div>
         );
 
-      case "image":
+      case "image": {
+        const imageValue =
+          stringValue(value);
+
         return (
           <div
             key={field.id}
@@ -431,7 +507,9 @@ setCategories(
             <input
               id={field.id}
               type="text"
-              value={value}
+              value={
+                imageValue
+              }
               onChange={(event) =>
                 updateMetadata(
                   field.id,
@@ -442,14 +520,18 @@ setCategories(
                 field.placeholder ??
                 "/images/..."
               }
-              required={field.required}
+              required={
+                field.required
+              }
               className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
             />
 
-            {value && (
+            {imageValue && (
               <div className="mt-3 overflow-hidden rounded-xl border border-neutral-200">
                 <img
-                  src={value}
+                  src={
+                    imageValue
+                  }
                   alt=""
                   className="max-h-64 w-full object-contain"
                 />
@@ -457,6 +539,7 @@ setCategories(
             )}
           </div>
         );
+      }
 
       case "list": {
         const items =
@@ -492,13 +575,18 @@ setCategories(
             </div>
 
             {items.map(
-              (item, index) => (
+              (
+                item,
+                index
+              ) => (
                 <div
                   key={`${field.id}-${index}`}
                   className="flex items-center gap-3"
                 >
                   <input
-                    value={item}
+                    value={
+                      item
+                    }
                     onChange={(
                       event
                     ) =>
@@ -531,7 +619,8 @@ setCategories(
               )
             )}
 
-            {items.length === 0 && (
+            {items.length ===
+              0 && (
               <p className="text-sm text-neutral-400">
                 Nothing added yet.
               </p>
@@ -552,20 +641,28 @@ setCategories(
 
             <input
               type="date"
-              value={value}
+              value={stringValue(
+                value
+              )}
               onChange={(event) =>
                 updateMetadata(
                   field.id,
                   event.target.value
                 )
               }
-              required={field.required}
+              required={
+                field.required
+              }
               className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
             />
           </div>
         );
 
-      case "boolean":
+      case "boolean": {
+        const checked =
+          value === true ||
+          value === "true";
+
         return (
           <label
             key={field.id}
@@ -574,14 +671,13 @@ setCategories(
             <input
               type="checkbox"
               checked={
-                value === "true"
+                checked
               }
               onChange={(event) =>
                 updateMetadata(
                   field.id,
-                  event.target.checked
-                    ? "true"
-                    : "false"
+                  event.target
+                    .checked
                 )
               }
             />
@@ -591,6 +687,7 @@ setCategories(
             </span>
           </label>
         );
+      }
 
       case "text":
       default:
@@ -615,7 +712,9 @@ setCategories(
             <input
               id={field.id}
               type="text"
-              value={value}
+              value={stringValue(
+                value
+              )}
               onChange={(event) =>
                 updateMetadata(
                   field.id,
@@ -625,7 +724,9 @@ setCategories(
               placeholder={
                 field.placeholder
               }
-              required={field.required}
+              required={
+                field.required
+              }
               className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
             />
           </div>
@@ -645,25 +746,26 @@ setCategories(
 
       const publishedDocument:
         Document = {
-          ...document,
+        ...document,
 
-          metadata: {
-            ...metadata,
-          },
+        metadata: {
+          ...metadata,
+        },
 
-          blocks: [
-            ...blocks,
-          ],
+        blocks: [
+          ...blocks,
+        ],
 
-          status: "published",
+        status:
+          "published",
 
-          publishedAt:
-            document.publishedAt ??
-            new Date().toISOString(),
+        publishedAt:
+          document.publishedAt ??
+          new Date().toISOString(),
 
-          updatedAt:
-            new Date().toISOString(),
-        };
+        updatedAt:
+          new Date().toISOString(),
+      };
 
       const response =
         await fetch(
@@ -687,9 +789,10 @@ setCategories(
           "Publishing request failed."
         );
       }
-await saveDocument(
-  publishedDocument
-);
+
+      await saveDocument(
+        publishedDocument
+      );
 
       setDocument(
         publishedDocument
@@ -716,7 +819,10 @@ await saveDocument(
     }
   }
 
-  if (!document || !schema) {
+  if (
+    !document ||
+    !schema
+  ) {
     return (
       <main className="min-h-screen bg-white">
         <div className="mx-auto max-w-3xl px-8 py-24">

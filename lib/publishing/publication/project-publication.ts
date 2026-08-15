@@ -1,10 +1,29 @@
 import type { Document } from "@/lib/models/document";
 import type { PublishedDocument } from "../contracts/published-document";
 
+function getText(
+  value: Document["metadata"][string]
+): string {
+  return typeof value === "string"
+    ? value.trim()
+    : "";
+}
+
 function parseList(
-  value?: string
+  value: Document["metadata"][string]
 ): string[] {
-  if (!value?.trim()) {
+  if (Array.isArray(value)) {
+    return value.filter(
+      (item): item is string =>
+        typeof item === "string"
+    );
+  }
+
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  if (!value.trim()) {
     return [];
   }
 
@@ -26,6 +45,15 @@ function parseList(
   }
 
   return [];
+}
+
+function getBoolean(
+  value: Document["metadata"][string]
+): boolean {
+  return (
+    value === true ||
+    value === "true"
+  );
 }
 
 export function createProjectPublication(
@@ -50,7 +78,9 @@ export function createProjectPublication(
   }
 
   const title =
-    document.metadata.title?.trim();
+    getText(
+      document.metadata.title
+    );
 
   if (!title) {
     throw new Error(
@@ -59,7 +89,9 @@ export function createProjectPublication(
   }
 
   const slug =
-    document.metadata.slug?.trim() ||
+    getText(
+      document.metadata.slug
+    ) ||
     title
       .toLowerCase()
       .trim()
@@ -69,7 +101,8 @@ export function createProjectPublication(
       )
       .replace(
         /^-+|-+$/g,
-        "");
+        ""
+      );
 
   if (!slug) {
     throw new Error(
@@ -86,48 +119,60 @@ export function createProjectPublication(
     title,
 
     tagline:
-      document.metadata.tagline?.trim() ??
-      "",
+      getText(
+        document.metadata.tagline
+      ),
 
     summary:
-      document.metadata.summary?.trim() ??
-      "",
+      getText(
+        document.metadata.summary
+      ),
 
     category:
-      document.metadata.category?.trim() ??
-      "",
+      getText(
+        document.metadata.category
+      ),
 
     status:
-      document.metadata.status?.trim() ??
+      getText(
+        document.metadata.status
+      ) ||
       "building",
 
     accentColor:
-      document.metadata.accentColor?.trim() ??
-      "",
+      getText(
+        document.metadata.accentColor
+      ),
 
     featured:
-      document.metadata.featured ===
-      "true",
+      getBoolean(
+        document.metadata.featured
+      ),
 
     logo:
-      document.metadata.logo?.trim() ??
-      "",
+      getText(
+        document.metadata.logo
+      ),
 
     primaryImage:
-      document.metadata.primaryImage?.trim() ??
-      "",
+      getText(
+        document.metadata.primaryImage
+      ),
 
     secondaryImage:
-      document.metadata.secondaryImage?.trim() ??
-      "",
+      getText(
+        document.metadata.secondaryImage
+      ),
 
     overview:
-      document.metadata.overview?.trim() ??
-      "",
+      getText(
+        document.metadata.overview
+      ),
 
     why:
-      document.metadata.why?.trim() ??
-      "",
+      getText(
+        document.metadata.why
+      ),
 
     techStack:
       parseList(
@@ -150,35 +195,51 @@ export function createProjectPublication(
       ),
 
     github:
-      document.metadata.github?.trim() ||
+      getText(
+        document.metadata.github
+      ) ||
       undefined,
 
     gallery:
-      document.metadata.gallery?.trim() ||
+      getText(
+        document.metadata.gallery
+      ) ||
       undefined,
 
     liveDemo:
-      document.metadata.liveDemo?.trim() ||
+      getText(
+        document.metadata.liveDemo
+      ) ||
       undefined,
 
     platform:
-      document.metadata.platform?.trim() ||
+      getText(
+        document.metadata.platform
+      ) ||
       undefined,
 
     framework:
-      document.metadata.framework?.trim() ||
+      getText(
+        document.metadata.framework
+      ) ||
       undefined,
 
     started:
-      document.metadata.started?.trim() ||
+      getText(
+        document.metadata.started
+      ) ||
       undefined,
 
     repository:
-      document.metadata.repository?.trim() ||
+      getText(
+        document.metadata.repository
+      ) ||
       undefined,
 
     team:
-      document.metadata.team?.trim() ||
+      getText(
+        document.metadata.team
+      ) ||
       undefined,
 
     roadmap:
@@ -187,8 +248,9 @@ export function createProjectPublication(
       ),
 
     version:
-      document.metadata.version?.trim() ??
-      "",
+      getText(
+        document.metadata.version
+      ),
   };
 
   return {

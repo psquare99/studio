@@ -3,8 +3,15 @@ export type DocumentStatus =
   | "published"
   | "modified";
 
+export type MetadataValue =
+  | string
+  | number
+  | boolean
+  | string[]
+  | null;
+
 export interface DocumentMetadata {
-  [key: string]: string;
+  [key: string]: MetadataValue;
 }
 
 export interface DocumentBlock {
