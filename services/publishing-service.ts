@@ -9,8 +9,8 @@ import {
 } from "@/lib/publishing/publication/project-publication";
 
 import {
-  LocalPublicationTransport,
-} from "@/lib/publishing/transport/local-publication-transport";
+  GitHubPublicationTransport,
+} from "@/lib/publishing/transport/github-publication-transport";
 
 import type { PublishedDocument } from "@/lib/publishing/contracts/published-document";
 
@@ -19,8 +19,6 @@ import {
   writePublication,
 } from "@/lib/publishing/publication/publication-writer";
 
-const WEBSITE_PROJECT_PATH =
-  process.env.WEBSITE_PROJECT_PATH;
 
 export function createPublication(
   document: Document
@@ -55,14 +53,10 @@ export function serializePublication(
   );
 }
 
-export function publishDocument(
+export async function publishDocument(
   document: Document
-): string {
-  if (!WEBSITE_PROJECT_PATH) {
-    throw new Error(
-      "WEBSITE_PROJECT_PATH is not configured."
-    );
-  }
+): Promise<string> {
+  
 
   const publication =
     createPublication(
@@ -75,25 +69,19 @@ export function publishDocument(
     );
 
   const transport =
-    new LocalPublicationTransport(
-      WEBSITE_PROJECT_PATH
-    );
+  new GitHubPublicationTransport();
 
-  return transport.deliver(
-    artifactPath,
-    publication.contentType,
-    publication.slug
-  );
+  return await transport.deliver(
+  artifactPath,
+  publication.contentType,
+  publication.slug
+);
 }
 
-export function deletePublishedDocument(
+export async function deletePublishedDocument(
   document: Document
-): void {
-  if (!WEBSITE_PROJECT_PATH) {
-    throw new Error(
-      "WEBSITE_PROJECT_PATH is not configured."
-    );
-  }
+): Promise<void> {
+  
 
   const publication =
     createPublication(
@@ -105,12 +93,10 @@ export function deletePublishedDocument(
   );
 
   const transport =
-    new LocalPublicationTransport(
-      WEBSITE_PROJECT_PATH
-    );
+  new GitHubPublicationTransport();
 
-  transport.remove(
-    publication.contentType,
-    publication.slug
-  );
+  await transport.remove(
+  publication.contentType,
+  publication.slug
+);
 }

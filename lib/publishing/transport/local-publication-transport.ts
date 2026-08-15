@@ -10,11 +10,11 @@ export class LocalPublicationTransport
     private readonly destinationRoot: string
   ) {}
 
-  deliver(
-    artifactPath: string,
-    contentType: string,
-    slug: string
-  ): string {
+  async deliver(
+  artifactPath: string,
+  contentType: string,
+  slug: string
+): Promise<string> {
     const destinationDirectory =
       path.join(
         this.destinationRoot,
@@ -44,10 +44,10 @@ export class LocalPublicationTransport
     return destinationPath;
   }
 
-  remove(
-    contentType: string,
-    slug: string
-  ): void {
+  async remove(
+  contentType: string,
+  slug: string
+): Promise<void> {
     const destinationPath =
       path.join(
         this.destinationRoot,

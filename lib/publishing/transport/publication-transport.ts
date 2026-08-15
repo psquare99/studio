@@ -3,10 +3,10 @@ export interface PublicationTransport {
     artifactPath: string,
     contentType: string,
     slug: string
-  ): string;
+  ): Promise<string>;
 
   remove(
     contentType: string,
     slug: string
-  ): void;
+  ): Promise<void>;
 }

@@ -39,9 +39,9 @@ export async function DELETE(
       });
     }
 
-    deletePublishedDocument(
-      document
-    );
+    await deletePublishedDocument(
+  document
+);
 
     return NextResponse.json({
       success: true,
@@ -99,7 +99,7 @@ export async function POST(
     }
 
     const publicationPath =
-      publishDocument(document);
+  await publishDocument(document);
 
     return NextResponse.json({
       success: true,
