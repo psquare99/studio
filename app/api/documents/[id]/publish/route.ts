@@ -1,19 +1,50 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import type { Document } from "@/lib/models/document";
 
 import {
-  publishDocument,
-} from "@/services/publishing-service";
+  isAuthenticated,
+} from "@/lib/auth";
 
 import {
+  publishDocument,
   deletePublishedDocument,
 } from "@/services/publishing-service";
 
+async function requireAuthentication() {
+  const cookieStore =
+    await cookies();
+
+  const sessionToken =
+    cookieStore.get(
+      "workshop_session",
+    )?.value;
+
+  return isAuthenticated(
+    sessionToken,
+  );
+}
+
 export async function DELETE(
-  request: Request
+  request: Request,
 ) {
   try {
+    const authenticated =
+      await requireAuthentication();
+
+    if (!authenticated) {
+      return NextResponse.json(
+        {
+          error:
+            "Authentication required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
     const document =
       (await request.json()) as Document;
 
@@ -25,7 +56,7 @@ export async function DELETE(
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -40,8 +71,8 @@ export async function DELETE(
     }
 
     await deletePublishedDocument(
-  document
-);
+      document,
+    );
 
     return NextResponse.json({
       success: true,
@@ -50,7 +81,7 @@ export async function DELETE(
   } catch (error) {
     console.error(
       "Deletion failed:",
-      error
+      error,
     );
 
     return NextResponse.json(
@@ -60,15 +91,30 @@ export async function DELETE(
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }
 
 export async function POST(
-  request: Request
+  request: Request,
 ) {
   try {
+    const authenticated =
+      await requireAuthentication();
+
+    if (!authenticated) {
+      return NextResponse.json(
+        {
+          error:
+            "Authentication required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
     const document =
       (await request.json()) as Document;
 
@@ -80,7 +126,7 @@ export async function POST(
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -94,31 +140,33 @@ export async function POST(
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
     const publicationPath =
-  await publishDocument(document);
+      await publishDocument(
+        document,
+      );
 
     return NextResponse.json({
       success: true,
       publicationPath,
     });
   } catch (error) {
-  console.error(
-    "Publishing failed:",
-    error
-  );
+    console.error(
+      "Publishing failed:",
+      error,
+    );
 
-  return NextResponse.json(
+    return NextResponse.json(
       {
         error:
           "Failed to publish document.",
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }

@@ -187,6 +187,7 @@ export async function consumeHandoffToken(
 
   return handoff.sessionToken;
 }
+
 export async function isAuthenticated(
   sessionToken: string | undefined,
 ) {
