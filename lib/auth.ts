@@ -2,6 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const OTP_TTL_SECONDS = 10 * 60;
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
+const HANDOFF_TTL_SECONDS = 60;
 const MAX_OTP_ATTEMPTS = 5;
 
 function getEnv() {
@@ -142,6 +143,50 @@ export async function verifyOtp(
   } as const;
 }
 
+export async function createHandoffToken(
+  sessionToken: string,
+) {
+  const env = getEnv();
+
+  const handoffToken = randomToken(32);
+
+  await env.WORKSHOP_AUTH.put(
+    `handoff:${handoffToken}`,
+    JSON.stringify({
+      sessionToken,
+      createdAt: Date.now(),
+    }),
+    {
+      expirationTtl: HANDOFF_TTL_SECONDS,
+    },
+  );
+
+  return handoffToken;
+}
+
+export async function consumeHandoffToken(
+  handoffToken: string,
+) {
+  const env = getEnv();
+
+  const key = `handoff:${handoffToken}`;
+
+  const stored =
+    await env.WORKSHOP_AUTH.get(key);
+
+  if (!stored) {
+    return null;
+  }
+
+  await env.WORKSHOP_AUTH.delete(key);
+
+  const handoff = JSON.parse(stored) as {
+    sessionToken: string;
+    createdAt: number;
+  };
+
+  return handoff.sessionToken;
+}
 export async function isAuthenticated(
   sessionToken: string | undefined,
 ) {

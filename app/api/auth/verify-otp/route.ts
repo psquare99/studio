@@ -1,28 +1,64 @@
 import { NextRequest } from "next/server";
 
-import { verifyOtp } from "@/lib/auth";
+import {
+  createHandoffToken,
+  verifyOtp,
+} from "@/lib/auth";
+import { getCorsHeaders } from "@/lib/cors";
 
-export async function POST(request: NextRequest) {
+function json(
+  request: NextRequest,
+  data: unknown,
+  init?: ResponseInit,
+) {
+  const headers = new Headers(init?.headers);
+  const corsHeaders = getCorsHeaders(request);
+
+  corsHeaders.forEach((value, key) => {
+    headers.set(key, value);
+  });
+
+  return Response.json(data, {
+    ...init,
+    headers,
+  });
+}
+
+export async function OPTIONS(
+  request: NextRequest,
+) {
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeaders(request),
+  });
+}
+
+export async function POST(
+  request: NextRequest,
+) {
   try {
-    const body = (await request.json()) as {
-  challengeId?: unknown;
-  otp?: unknown;
-};
+    const body =
+      (await request.json()) as {
+        challengeId?: unknown;
+        otp?: unknown;
+      };
 
-const challengeId =
-  typeof body.challengeId === "string"
-    ? body.challengeId
-    : "";
+    const challengeId =
+      typeof body.challengeId === "string"
+        ? body.challengeId
+        : "";
 
-const otp =
-  typeof body.otp === "string"
-    ? body.otp
-    : "";
+    const otp =
+      typeof body.otp === "string"
+        ? body.otp
+        : "";
 
     if (!challengeId || !otp) {
-      return Response.json(
+      return json(
+        request,
         {
-          error: "Enter the verification code.",
+          error:
+            "Enter the verification code.",
         },
         { status: 400 },
       );
@@ -43,7 +79,8 @@ const otp =
           "That code isn't correct.",
       };
 
-      return Response.json(
+      return json(
+        request,
         {
           error: messages[result.reason],
         },
@@ -51,9 +88,18 @@ const otp =
       );
     }
 
-    const response = Response.json({
-      success: true,
-    });
+    const handoffToken =
+      await createHandoffToken(
+        result.sessionToken,
+      );
+
+    const response = json(
+      request,
+      {
+        success: true,
+        handoffToken,
+      },
+    );
 
     response.headers.set(
       "Set-Cookie",
@@ -71,7 +117,8 @@ const otp =
   } catch (error) {
     console.error(error);
 
-    return Response.json(
+    return json(
+      request,
       {
         error:
           "Unable to verify the code.",
