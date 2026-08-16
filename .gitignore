@@ -42,3 +42,9 @@ next-env.d.ts
 
 # Generated publishing artifacts
 /publications/
+
+/.open-next/
+
+.dev.vars
+
+.wrangler/

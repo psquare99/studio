@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "long-way-home-studio",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://molohklzowfcwcfperel.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_8Ystm_-6lA135Eobuu62Zw_FfJTm-Wm",
+    "GITHUB_OWNER": "psquare99",
+    "GITHUB_REPO": "website",
+    "GITHUB_BRANCH": "main"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "long-way-home-studio"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "WORKSHOP_AUTH",
+      "id": "f194f9313b3b4b62bd4c4a904dd644f1",
+      "remote": true
+    }
+  ]
+}
