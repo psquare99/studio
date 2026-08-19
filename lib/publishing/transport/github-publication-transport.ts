@@ -1,3 +1,4 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { PublicationTransport } from "./publication-transport";
 
 interface GitHubContentResponse {
@@ -16,42 +17,45 @@ export class GitHubPublicationTransport
   private readonly branch: string;
 
   constructor() {
-    const token =
-      process.env.GITHUB_TOKEN;
+  const { env } =
+    getCloudflareContext();
 
-    const owner =
-      process.env.GITHUB_OWNER;
+  const token =
+    env.GITHUB_TOKEN;
 
-    const repo =
-      process.env.GITHUB_REPO;
+  const owner =
+    env.GITHUB_OWNER;
 
-    const branch =
-      process.env.GITHUB_BRANCH ??
-      "main";
+  const repo =
+    env.GITHUB_REPO;
 
-    if (!token) {
-      throw new Error(
-        "GITHUB_TOKEN is not configured."
-      );
-    }
+  const branch =
+    env.GITHUB_BRANCH ??
+    "main";
 
-    if (!owner) {
-      throw new Error(
-        "GITHUB_OWNER is not configured."
-      );
-    }
-
-    if (!repo) {
-      throw new Error(
-        "GITHUB_REPO is not configured."
-      );
-    }
-
-    this.token = token;
-    this.owner = owner;
-    this.repo = repo;
-    this.branch = branch;
+  if (!token) {
+    throw new Error(
+      "GITHUB_TOKEN is not configured."
+    );
   }
+
+  if (!owner) {
+    throw new Error(
+      "GITHUB_OWNER is not configured."
+    );
+  }
+
+  if (!repo) {
+    throw new Error(
+      "GITHUB_REPO is not configured."
+    );
+  }
+
+  this.token = token;
+  this.owner = owner;
+  this.repo = repo;
+  this.branch = branch;
+}
 
   private getApiUrl(
     filePath: string
@@ -80,6 +84,7 @@ export class GitHubPublicationTransport
               `Bearer ${this.token}`,
             "X-GitHub-Api-Version":
               "2022-11-28",
+            "User-Agent": "The-Long-Way-Home-Studio",
           },
         }
       );
@@ -89,10 +94,12 @@ export class GitHubPublicationTransport
     }
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to inspect GitHub file: ${response.status} ${response.statusText}`
-      );
-    }
+  const error = await response.text();
+
+  throw new Error(
+    `Failed to inspect GitHub file: ${response.status} ${response.statusText} ${error}`
+  );
+}
 
     const data =
       (await response.json()) as GitHubContentResponse;
@@ -104,19 +111,10 @@ export class GitHubPublicationTransport
   }
 
   async deliver(
-    artifactPath: string,
+    content: string,
     contentType: string,
     slug: string
   ): Promise<string> {
-    const fs =
-      await import("node:fs/promises");
-
-    const content =
-      await fs.readFile(
-        artifactPath,
-        "utf-8"
-      );
-
     const filePath =
       `content/published/${contentType}/${slug}.json`;
 
@@ -131,11 +129,16 @@ export class GitHubPublicationTransport
     > = {
       message:
         `Publish ${contentType}: ${slug}`,
+
       content:
-        Buffer.from(
-          content,
-          "utf-8"
-        ).toString("base64"),
+        btoa(
+          unescape(
+            encodeURIComponent(
+              content
+            )
+          )
+        ),
+
       branch:
         this.branch,
     };
@@ -159,6 +162,7 @@ export class GitHubPublicationTransport
               "application/json",
             "X-GitHub-Api-Version":
               "2022-11-28",
+            "User-Agent": "The-Long-Way-Home-Studio",
           },
 
           body: JSON.stringify(
@@ -210,6 +214,7 @@ export class GitHubPublicationTransport
               "application/json",
             "X-GitHub-Api-Version":
               "2022-11-28",
+            "User-Agent": "The-Long-Way-Home-Studio",
           },
 
           body: JSON.stringify({

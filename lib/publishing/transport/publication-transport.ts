@@ -1,6 +1,6 @@
 export interface PublicationTransport {
   deliver(
-    artifactPath: string,
+    content: string,
     contentType: string,
     slug: string
   ): Promise<string>;
