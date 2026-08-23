@@ -150,7 +150,7 @@ const schemas: Schema[] = [
         label: "Logo",
         type: "image",
         required: true,
-        placeholder: "/images/projects/example/logo.png",
+        placeholder: "Upload an image or paste its URL",
       },
 
       {
@@ -158,7 +158,7 @@ const schemas: Schema[] = [
         label: "Primary Image",
         type: "image",
         required: true,
-        placeholder: "/images/projects/example/primary.png",
+        placeholder: "Upload an image or paste its URL",
       },
 
       {
@@ -166,7 +166,15 @@ const schemas: Schema[] = [
         label: "Secondary Image",
         type: "image",
         required: true,
-        placeholder: "/images/projects/example/secondary.png",
+        placeholder: "Upload an image or paste its URL",
+      },
+
+      {
+        id: "indexImage",
+        label: "Index Image",
+        type: "image",
+        required: false,
+        placeholder: "Upload an image or paste its URL",
       },
 
       {

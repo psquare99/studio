@@ -16,9 +16,7 @@ import type { PublishedDocument } from "@/lib/publishing/contracts/published-doc
 
 import {
   deletePublication,
-  writePublication,
 } from "@/lib/publishing/publication/publication-writer";
-
 
 export function createPublication(
   document: Document
@@ -56,47 +54,39 @@ export function serializePublication(
 export async function publishDocument(
   document: Document
 ): Promise<string> {
-  
-
   const publication =
     createPublication(
       document
     );
 
-  const artifactPath =
-    writePublication(
+  const content =
+    serializePublication(
       publication
     );
 
   const transport =
-  new GitHubPublicationTransport();
+    new GitHubPublicationTransport();
 
   return await transport.deliver(
-  artifactPath,
-  publication.contentType,
-  publication.slug
-);
+    content,
+    publication.contentType,
+    publication.slug
+  );
 }
 
 export async function deletePublishedDocument(
   document: Document
 ): Promise<void> {
-  
-
   const publication =
     createPublication(
       document
     );
 
-  deletePublication(
-    publication
-  );
-
   const transport =
-  new GitHubPublicationTransport();
+    new GitHubPublicationTransport();
 
   await transport.remove(
-  publication.contentType,
-  publication.slug
-);
+    publication.contentType,
+    publication.slug
+  );
 }

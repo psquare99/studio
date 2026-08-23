@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { DocumentBlock } from "@/lib/models/document";
 
 interface BlockEditorProps {
@@ -89,6 +91,8 @@ export default function BlockEditor({
   onChange,
   allowedBlocks,
 }: BlockEditorProps) {
+  const [uploadingBlockId, setUploadingBlockId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<{ blockId: string; message: string } | null>(null);
   function updateBlock(
     blockId: string,
     data: unknown
@@ -268,21 +272,94 @@ export default function BlockEditor({
                 Image
               </div>
 
-              <input
-                type="text"
-                value={data.src ?? ""}
-                onChange={(event) =>
-                  updateBlock(
-                    block.id,
-                    {
-                      src: event.target.value,
-                      alt: data.alt ?? "",
-                    }
-                  )
-                }
-                placeholder="Image URL"
-                className="w-full rounded-lg border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-neutral-400"
-              />
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center rounded-lg border border-neutral-200 px-4 py-2 text-sm text-neutral-600 transition hover:border-neutral-400 hover:text-black">
+                  {uploadingBlockId === block.id ? "Uploading..." : "Upload image"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                    className="sr-only"
+                    disabled={uploadingBlockId === block.id}
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+
+                      if (!file) {
+                        return;
+                      }
+
+                      setUploadError(null);
+                      setUploadingBlockId(block.id);
+
+                      try {
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        formData.append("alt", data.alt ?? "");
+
+                        const response = await fetch("/api/media/upload", {
+                          method: "POST",
+                          body: formData,
+                        });
+
+                        const responseText = await response.text();
+
+let result: {
+  asset?: {
+    url: string;
+    alt: string;
+  };
+  error?: string;
+};
+
+try {
+  result = JSON.parse(responseText);
+} catch {
+  throw new Error(
+    `Upload API returned non-JSON (${response.status}): ${responseText.slice(0, 300)}`
+  );
+}
+
+                        if (!response.ok || !result.asset) {
+                          throw new Error(result.error ?? "Failed to upload image.");
+                        }
+
+                        updateBlock(block.id, {
+                          src: result.asset.url,
+                          alt: result.asset.alt,
+                        });
+                      } catch (error) {
+                        setUploadError({
+                          blockId: block.id,
+                          message:
+                            error instanceof Error
+                              ? error.message
+                              : "Failed to upload image.",
+                        });
+                      } finally {
+                        setUploadingBlockId(null);
+                        event.target.value = "";
+                      }
+                    }}
+                  />
+                </label>
+
+                <span className="text-xs text-neutral-300">or</span>
+
+                <input
+                  type="text"
+                  value={data.src ?? ""}
+                  onChange={(event) =>
+                    updateBlock(
+                      block.id,
+                      {
+                        src: event.target.value,
+                        alt: data.alt ?? "",
+                      }
+                    )
+                  }
+                  placeholder="Paste image URL"
+                  className="min-w-[240px] flex-1 rounded-lg border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-neutral-400"
+                />
+              </div>
 
               <input
                 type="text"
@@ -299,6 +376,10 @@ export default function BlockEditor({
                 placeholder="Alt text"
                 className="w-full rounded-lg border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-neutral-400"
               />
+
+              {uploadError?.blockId === block.id && (
+                <p className="text-sm text-red-500">{uploadError.message}</p>
+              )}
 
               {data.src && (
                 <div className="overflow-hidden rounded-lg border border-neutral-200">

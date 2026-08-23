@@ -164,6 +164,11 @@ export function createProjectPublication(
         document.metadata.secondaryImage
       ),
 
+    indexImage:
+  getText(
+    document.metadata.indexImage
+  ),
+
     overview:
       getText(
         document.metadata.overview
