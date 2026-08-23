@@ -121,6 +121,16 @@ export default function DocumentPage() {
       | "error"
     >("idle");
 
+  const [
+    uploadingImageFieldId,
+    setUploadingImageFieldId,
+  ] = useState<string | null>(null);
+
+  const [
+    imageUploadError,
+    setImageUploadError,
+  ] = useState<string | null>(null);
+
   const hasLoaded =
     useRef(false);
 
@@ -270,6 +280,92 @@ export default function DocumentPage() {
           value,
       })
     );
+  }
+
+  async function uploadImage(
+    field: MetadataField,
+    file: File
+  ) {
+    setUploadingImageFieldId(
+      field.id
+    );
+
+    setImageUploadError(null);
+
+    try {
+      const formData = new FormData();
+
+      formData.append(
+        "file",
+        file
+      );
+
+      const title =
+        stringValue(
+          metadata.title
+        ).trim();
+
+      const alt = [
+        title,
+        field.label,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      formData.append(
+        "alt",
+        alt
+      );
+
+      const response = await fetch(
+        "/api/media/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const result = await response
+        .json()
+        .catch(() => null) as {
+          asset?: {
+            url?: unknown;
+          };
+          error?: unknown;
+        } | null;
+
+      if (!response.ok) {
+        throw new Error(
+          typeof result?.error ===
+            "string"
+            ? result.error
+            : "Image upload failed."
+        );
+      }
+
+      const url = result?.asset?.url;
+
+      if (typeof url !== "string" || !url) {
+        throw new Error(
+          "The upload did not return an image URL."
+        );
+      }
+
+      updateMetadata(
+        field.id,
+        url
+      );
+    } catch (error) {
+      setImageUploadError(
+        error instanceof Error
+          ? error.message
+          : "Image upload failed."
+      );
+    } finally {
+      setUploadingImageFieldId(
+        null
+      );
+    }
   }
 
   function updateListItem(
@@ -486,10 +582,14 @@ export default function DocumentPage() {
         const imageValue =
           stringValue(value);
 
+        const isUploading =
+          uploadingImageFieldId ===
+          field.id;
+
         return (
           <div
             key={field.id}
-            className="mt-8 space-y-2"
+            className="mt-8 space-y-3"
           >
             <label
               htmlFor={field.id}
@@ -526,8 +626,55 @@ export default function DocumentPage() {
               className={`${commonClassName} border-b border-neutral-200 pb-2 text-lg text-neutral-700`}
             />
 
+            <div className="flex items-center gap-3">
+              <label
+                htmlFor={`${field.id}-upload`}
+                className="cursor-pointer rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-400 hover:text-black"
+              >
+                {isUploading
+                  ? "Uploading..."
+                  : "Upload image"}
+
+                <input
+                  id={`${field.id}-upload`}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                  disabled={isUploading}
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file =
+                      event.target.files?.[0];
+
+                    event.target.value = "";
+
+                    if (file) {
+                      void uploadImage(
+                        field,
+                        file
+                      );
+                    }
+                  }}
+                />
+              </label>
+
+              <span className="text-sm text-neutral-400">
+                Or paste an existing URL above.
+              </span>
+            </div>
+
+            {imageUploadError &&
+              uploadingImageFieldId ===
+                null && (
+                <p
+                  className="text-sm text-red-600"
+                  role="alert"
+                >
+                  {imageUploadError}
+                </p>
+              )}
+
             {imageValue && (
-              <div className="mt-3 overflow-hidden rounded-xl border border-neutral-200">
+              <div className="overflow-hidden rounded-xl border border-neutral-200">
                 <img
                   src={
                     imageValue
@@ -767,22 +914,21 @@ export default function DocumentPage() {
           new Date().toISOString(),
       };
 
-      const response =
-        await fetch(
-          `/api/documents/${id}/publish`,
-          {
-            method: "POST",
+      const response = await fetch(
+        `/api/documents/${id}/publish`,
+        {
+          method: "POST",
 
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-            body: JSON.stringify(
-              publishedDocument
-            ),
-          }
-        );
+          body: JSON.stringify(
+            publishedDocument
+          ),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(
@@ -878,7 +1024,9 @@ export default function DocumentPage() {
                 }
                 disabled={
                   publishStatus ===
-                  "publishing"
+                    "publishing" ||
+                  uploadingImageFieldId !==
+                    null
                 }
                 className="rounded-xl bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
               >

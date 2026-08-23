@@ -29,5 +29,12 @@
       "id": "f194f9313b3b4b62bd4c4a904dd644f1",
       "remote": true
     }
-  ]
+  ],
+  "r2_buckets": [
+  {
+    "binding": "MEDIA_BUCKET",
+    "bucket_name": "studio-media",
+    "remote": true
+  }
+],
 }
