@@ -10,13 +10,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import {
-  loadEditorDocument,
-  saveDocument,
-} from "@/services/document-service";
-
-import {
-  loadCategories,
-} from "@/services/category-service";
+  loadSchemaForContentType,
+} from "@/services/schema-service";
 
 import type { Category } from "@/lib/models/category";
 import type { Document } from "@/lib/models/document";
@@ -137,54 +132,96 @@ export default function DocumentPage() {
   const lastSavedFingerprint =
     useRef<string>("");
 
+  const [loadError, setLoadError] =
+    useState<string | null>(null);
+
   useEffect(() => {
     async function load() {
-      const editorDocument =
-        await loadEditorDocument(id);
+      try {
+        const response =
+          await fetch(
+            `/api/documents/${id}`
+          );
 
-      if (!editorDocument) {
-        return;
+        if (response.status === 404) {
+          setLoadError(
+            "This document could not be found."
+          );
+
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error();
+        }
+
+        const result =
+          (await response.json()) as {
+            document?: Document;
+          };
+
+        const loadedDocument =
+          result.document;
+
+        if (!loadedDocument) {
+          throw new Error();
+        }
+
+        const loadedSchema =
+          loadSchemaForContentType(
+            loadedDocument.workspaceId,
+            loadedDocument.contentTypeId
+          );
+
+        if (!loadedSchema) {
+          throw new Error();
+        }
+
+        setDocument(
+          loadedDocument
+        );
+
+        setSchema(
+          loadedSchema
+        );
+
+        setMetadata({
+          ...loadedDocument.metadata,
+        });
+
+        setBlocks([
+          ...loadedDocument.blocks,
+        ]);
+
+        const categoriesResponse =
+          await fetch(
+            `/api/categories?workspaceId=${encodeURIComponent(loadedDocument.workspaceId)}`
+          );
+
+        if (categoriesResponse.ok) {
+          const categoriesResult =
+            (await categoriesResponse.json()) as {
+              categories?: Category[];
+            };
+
+          setCategories(
+            categoriesResult.categories ??
+              []
+          );
+        }
+
+        lastSavedFingerprint.current =
+          createContentFingerprint(
+            loadedDocument.metadata,
+            loadedDocument.blocks
+          );
+
+        hasLoaded.current = true;
+      } catch {
+        setLoadError(
+          "The document could not be loaded."
+        );
       }
-
-      const {
-        document:
-          loadedDocument,
-        schema:
-          loadedSchema,
-      } = editorDocument;
-
-      setDocument(
-        loadedDocument
-      );
-
-      setSchema(
-        loadedSchema
-      );
-
-      setMetadata({
-        ...loadedDocument.metadata,
-      });
-
-      setBlocks([
-        ...loadedDocument.blocks,
-      ]);
-
-      const workspaceCategories =
-        await loadCategories(
-          loadedDocument.workspaceId
-        );
-
-      setCategories(
-        workspaceCategories
-      );
-
-      lastSavedFingerprint.current =
-        createContentFingerprint(
-          loadedDocument.metadata,
-          loadedDocument.blocks
-        );
-
-      hasLoaded.current = true;
     }
 
     load();
@@ -240,9 +277,25 @@ export default function DocumentPage() {
               new Date().toISOString(),
           };
 
-          await saveDocument(
-            updatedDocument
+          const response = await fetch(
+            `/api/documents/${id}`,
+            {
+              method: "PUT",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify(
+                updatedDocument
+              ),
+            }
           );
+
+          if (!response.ok) {
+            throw new Error();
+          }
 
           setDocument(
             updatedDocument
@@ -936,9 +989,25 @@ export default function DocumentPage() {
         );
       }
 
-      await saveDocument(
-        publishedDocument
+      const saveResponse = await fetch(
+        `/api/documents/${id}`,
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify(
+            publishedDocument
+          ),
+        }
       );
+
+      if (!saveResponse.ok) {
+        throw new Error();
+      }
 
       setDocument(
         publishedDocument
@@ -963,6 +1032,18 @@ export default function DocumentPage() {
         "error"
       );
     }
+  }
+
+  if (loadError) {
+    return (
+      <main className="min-h-screen bg-white">
+        <div className="mx-auto max-w-3xl px-8 py-24">
+          <p className="text-neutral-500">
+            {loadError}
+          </p>
+        </div>
+      </main>
+    );
   }
 
   if (

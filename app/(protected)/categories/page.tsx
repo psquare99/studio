@@ -7,13 +7,6 @@ import {
 } from "react";
 import Link from "next/link";
 
-import {
-  addCategory,
-  editCategory,
-  loadCategories,
-  removeCategory,
-} from "@/services/category-service";
-
 import type { Category } from "@/lib/models/category";
 
 const WORKSPACE_ID =
@@ -45,14 +38,29 @@ export default function CategoriesPage() {
 
   useEffect(() => {
   async function load() {
-    const workspaceCategories =
-      await loadCategories(
-        WORKSPACE_ID
-      );
+    try {
+      const response =
+        await fetch(
+          `/api/categories?workspaceId=${encodeURIComponent(WORKSPACE_ID)}`
+        );
 
-    setCategories(
-      workspaceCategories
-    );
+      if (!response.ok) {
+        throw new Error();
+      }
+
+      const result =
+        (await response.json()) as {
+          categories?: Category[];
+        };
+
+      setCategories(
+        result.categories ?? []
+      );
+    } catch {
+      setError(
+        "The categories could not be loaded."
+      );
+    }
   }
 
   load();
@@ -112,17 +120,58 @@ export default function CategoriesPage() {
       return;
     }
 
-    const category =
-  await addCategory(
-    WORKSPACE_ID,
-    trimmedName,
-    slug
-  );
+    let created: Category;
+
+    try {
+      const response =
+        await fetch(
+          "/api/categories",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              workspaceId:
+                WORKSPACE_ID,
+              name: trimmedName,
+              slug,
+            }),
+          }
+        );
+
+      const result =
+        (await response.json().catch(() => null)) as {
+          category?: Category;
+          error?: unknown;
+        } | null;
+
+      if (!response.ok || !result?.category) {
+        throw new Error(
+          typeof result?.error === "string"
+            ? result.error
+            : undefined
+        );
+      }
+
+      created = result.category;
+    } catch (createError) {
+      setError(
+        createError instanceof Error && createError.message
+          ? createError.message
+          : "The category could not be created."
+      );
+
+      return;
+    }
 
     setCategories(
       (current) => [
         ...current,
-        category,
+        created,
       ]
     );
 
@@ -190,9 +239,34 @@ export default function CategoriesPage() {
         slug,
       };
 
-    await editCategory(
-  updatedCategory
-);
+    try {
+      const response =
+        await fetch(
+          `/api/categories/${category.id}`,
+          {
+            method: "PUT",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify(
+              updatedCategory
+            ),
+          }
+        );
+
+      if (!response.ok) {
+        throw new Error();
+      }
+    } catch {
+      setError(
+        "The category could not be updated."
+      );
+
+      return;
+    }
 
     setCategories(
       (current) =>
@@ -220,9 +294,25 @@ export default function CategoriesPage() {
       return;
     }
 
-    await removeCategory(
-  category.id
-);
+    try {
+      const response =
+        await fetch(
+          `/api/categories/${category.id}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+      if (!response.ok) {
+        throw new Error();
+      }
+    } catch {
+      window.alert(
+        "The category could not be deleted."
+      );
+
+      return;
+    }
 
     setCategories(
       (current) =>

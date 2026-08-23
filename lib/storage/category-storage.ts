@@ -1,5 +1,8 @@
 import { Category } from "@/lib/models/category";
-import { supabase } from "@/lib/supabase";
+
+import "server-only";
+
+import { getSupabaseServer } from "@/lib/supabase-server";
 
 const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
   {
@@ -46,6 +49,8 @@ function fromRow(row: {
 export async function getCategories(
   workspaceId: string
 ): Promise<Category[]> {
+  const supabase = getSupabaseServer();
+
   const { data, error } = await supabase
     .from("categories")
     .select("id, workspace_id, name, slug")
@@ -64,6 +69,8 @@ export async function getCategories(
 export async function getCategory(
   id: string
 ): Promise<Category | undefined> {
+  const supabase = getSupabaseServer();
+
   const { data, error } = await supabase
     .from("categories")
     .select("id, workspace_id, name, slug")
@@ -84,6 +91,8 @@ export async function createCategory(
   name: string,
   slug: string
 ): Promise<Category> {
+  const supabase = getSupabaseServer();
+
   const { data, error } = await supabase
     .from("categories")
     .insert({
@@ -106,6 +115,8 @@ export async function createCategory(
 export async function updateCategory(
   updated: Category
 ): Promise<Category> {
+  const supabase = getSupabaseServer();
+
   const { data, error } = await supabase
     .from("categories")
     .update({
@@ -129,6 +140,8 @@ export async function updateCategory(
 export async function deleteCategory(
   id: string
 ): Promise<void> {
+  const supabase = getSupabaseServer();
+
   const { error } = await supabase
     .from("categories")
     .delete()
@@ -144,6 +157,8 @@ export async function deleteCategory(
 export async function seedDefaultCategories(
   workspaceId: string
 ): Promise<void> {
+  const supabase = getSupabaseServer();
+
   const existing =
     await getCategories(workspaceId);
 

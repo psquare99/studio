@@ -5,10 +5,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { loadContentTypes } from "@/services/content-type-service";
-import {
-  loadRecentDocuments,
-  removeDocument,
-} from "@/services/document-service";
 
 import DocumentList from "@/components/workspace/DocumentList";
 
@@ -37,21 +33,33 @@ export default function ContentTypePage() {
 
  useEffect(() => {
   async function loadDocuments() {
-    const recentDocuments =
-      await loadRecentDocuments();
+    try {
+      const response =
+        await fetch(
+          `/api/documents?contentTypeId=${encodeURIComponent(contentTypeId)}`
+        );
 
-    const filteredDocuments =
-      recentDocuments.filter(
-        (document) =>
-          document.workspaceId ===
-            WORKSPACE_ID &&
-          document.contentTypeId ===
-            contentTypeId
+      if (!response.ok) {
+        throw new Error();
+      }
+
+      const result =
+        (await response.json()) as {
+          documents?: Document[];
+        };
+
+      setDocuments(
+        (result.documents ?? []).filter(
+          (document) =>
+            document.workspaceId ===
+            WORKSPACE_ID
+        )
       );
-
-    setDocuments(
-      filteredDocuments
-    );
+    } catch {
+      window.alert(
+        "The documents could not be loaded."
+      );
+    }
   }
 
   loadDocuments();
@@ -111,7 +119,33 @@ export default function ContentTypePage() {
     }
   }
 
-  await removeDocument(id);
+  try {
+    const response =
+      await fetch(
+        `/api/documents/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+    if (!response.ok) {
+      throw new Error(
+        "Failed to delete document."
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Failed to delete document:",
+      error
+    );
+
+    window.alert(
+      "The document could not be deleted. It was kept in Studio."
+    );
+
+    return;
+  }
+
   setDocuments(
     (current) =>
       current.filter(

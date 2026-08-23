@@ -1,6 +1,8 @@
 import type { Document } from "@/lib/models/document";
 
-import { supabase } from "@/lib/supabase";
+import "server-only";
+
+import { getSupabaseServer } from "@/lib/supabase-server";
 
 function fromDatabaseRow(
   row: {
@@ -77,6 +79,8 @@ function toDatabaseRow(
 }
 
 export async function getDocuments(): Promise<Document[]> {
+  const supabase = getSupabaseServer();
+
   const { data, error } =
     await supabase
       .from("documents")
@@ -99,6 +103,8 @@ export async function getDocuments(): Promise<Document[]> {
 export async function saveDocuments(
   documents: Document[]
 ): Promise<void> {
+  const supabase = getSupabaseServer();
+
   if (documents.length === 0) {
     return;
   }
@@ -122,6 +128,8 @@ export async function createDocument(
   workspaceId: string,
   contentTypeId: string
 ): Promise<Document> {
+  const supabase = getSupabaseServer();
+
   const document: Document = {
     id: crypto.randomUUID(),
 
@@ -160,6 +168,8 @@ export async function createDocument(
 export async function getDocument(
   id: string
 ): Promise<Document | undefined> {
+  const supabase = getSupabaseServer();
+
   const { data, error } =
     await supabase
       .from("documents")
@@ -183,6 +193,8 @@ export async function getDocument(
 export async function updateDocument(
   updated: Document
 ): Promise<void> {
+  const supabase = getSupabaseServer();
+
   const { error } =
     await supabase
       .from("documents")
@@ -201,6 +213,8 @@ export async function updateDocument(
 export async function deleteDocument(
   id: string
 ): Promise<void> {
+  const supabase = getSupabaseServer();
+
   const { error } =
     await supabase
       .from("documents")
