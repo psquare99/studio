@@ -15,7 +15,8 @@
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_8Ystm_-6lA135Eobuu62Zw_FfJTm-Wm",
     "GITHUB_OWNER": "psquare99",
     "GITHUB_REPO": "website",
-    "GITHUB_BRANCH": "main"
+    "GITHUB_BRANCH": "main",
+    "MEDIA_PUBLIC_URL": "https://pub-afd5b578ae094d339252bb77b1349f57.r2.dev"
   },
   "services": [
     {
