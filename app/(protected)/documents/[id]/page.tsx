@@ -105,8 +105,11 @@ export default function DocumentPage() {
 
   const [saveStatus, setSaveStatus] =
     useState<
-      "saved" | "saving"
+      "saved" | "saving" | "failed"
     >("saved");
+
+  const [saveError, setSaveError] =
+    useState<string | null>(null);
 
   const [publishStatus, setPublishStatus] =
     useState<
@@ -115,6 +118,10 @@ export default function DocumentPage() {
       | "published"
       | "error"
     >("idle");
+
+  const saveGeneration = useRef(0);
+  const pendingSaveRef = useRef<Promise<void> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [
     uploadingImageFieldId,
@@ -246,80 +253,123 @@ export default function DocumentPage() {
       currentFingerprint !==
       lastSavedFingerprint.current;
 
+    if (!contentChanged) {
+      return;
+    }
+
     setSaveStatus("saving");
+    setSaveError(null);
 
-    const timeout =
-      window.setTimeout(
-        async () => {
-          const nextStatus =
-            document.status ===
-              "published" &&
-            contentChanged
-              ? "modified"
-              : document.status;
+    const timeout = window.setTimeout(
+      async () => {
+        timeoutRef.current = null;
+        const promise = executeSave();
+        pendingSaveRef.current = promise;
+        await promise;
+      },
+      500
+    ) as unknown as ReturnType<typeof setTimeout>;
 
-          const updatedDocument:
-            Document = {
-            ...document,
-
-            metadata: {
-              ...metadata,
-            },
-
-            blocks: [
-              ...blocks,
-            ],
-
-            status:
-              nextStatus,
-
-            updatedAt:
-              new Date().toISOString(),
-          };
-
-          const response = await fetch(
-            `/api/documents/${id}`,
-            {
-              method: "PUT",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify(
-                updatedDocument
-              ),
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error();
-          }
-
-          setDocument(
-            updatedDocument
-          );
-
-          lastSavedFingerprint.current =
-            currentFingerprint;
-
-          setSaveStatus(
-            "saved"
-          );
-        },
-        500
-      );
+    timeoutRef.current = timeout;
 
     return () => {
-      window.clearTimeout(
-        timeout
-      );
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
-  }, [
-    metadata,
-    blocks,
-  ]);
+  }, [metadata, blocks, id, document?.status, document, executeSave, schema]);
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      const currentFingerprint = createContentFingerprint(metadata, blocks);
+      const contentChanged =
+        currentFingerprint !== lastSavedFingerprint.current;
+      if (contentChanged) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [metadata, blocks, document, schema]);
+
+  async function executeSave(): Promise<void> {
+    if (!document) {
+      return;
+    }
+    const currentGen = saveGeneration.current + 1;
+    saveGeneration.current = currentGen;
+
+    const currentFingerprint = createContentFingerprint(metadata, blocks);
+
+    const nextStatus =
+      document.status === "published" ? "modified" : document.status;
+
+    const updatedDocument: Document = {
+      id: document.id,
+      workspaceId: document.workspaceId,
+      contentTypeId: document.contentTypeId,
+      metadata: { ...metadata },
+      blocks: [...blocks],
+      status: nextStatus,
+      updatedAt: new Date().toISOString(),
+      ...(document.publishedAt ? { publishedAt: document.publishedAt } : {}),
+    };
+
+    setSaveStatus("saving");
+    setSaveError(null);
+
+    try {
+      const response = await fetch(
+        `/api/documents/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedDocument),
+        });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(errorText || "Save failed");
+      }
+
+      if (saveGeneration.current !== currentGen) {
+        return;
+      }
+
+      setDocument(updatedDocument);
+      lastSavedFingerprint.current = currentFingerprint;
+      setSaveStatus("saved");
+      setSaveError(null);
+    } catch (error) {
+      if (saveGeneration.current !== currentGen) {
+        return;
+      }
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Save failed";
+      setSaveStatus("failed");
+      setSaveError(message);
+      throw error;
+    }
+  }
+
+  async function flushPendingSave(): Promise<void> {
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+      await executeSave();
+    }
+    if (pendingSaveRef.current) {
+      await pendingSaveRef.current;
+      pendingSaveRef.current = null;
+    }
+  }
 
   function updateMetadata(
     fieldId: string,
@@ -940,6 +990,8 @@ export default function DocumentPage() {
     }
 
     try {
+      await flushPendingSave();
+
       setPublishStatus(
         "publishing"
       );
@@ -1087,11 +1139,26 @@ export default function DocumentPage() {
 
           <div className="flex items-center gap-4">
             <span className="text-sm text-neutral-400">
-              {saveStatus ===
-              "saving"
+              {saveStatus === "saving"
                 ? "Saving..."
+                : saveStatus === "failed"
+                ? "Save failed"
                 : "Saved"}
             </span>
+            {saveStatus === "failed" && saveError && (
+              <span className="text-sm text-red-500 flex items-center gap-2">
+                {saveError}
+                <button
+                  onClick={() => {
+                    setSaveError(null);
+                    setSaveStatus("saving");
+                  }}
+                  className="text-xs underline hover:text-red-700"
+                >
+                  Retry
+                </button>
+              </span>
+            )}
 
             {(
               document.status ===
