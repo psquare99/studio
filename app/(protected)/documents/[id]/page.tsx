@@ -120,8 +120,17 @@ export default function DocumentPage() {
     >("idle");
 
   const saveGeneration = useRef(0);
-  const pendingSaveRef = useRef<Promise<void> | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const pendingSaveRef =
+    useRef<Promise<void> | null>(null);
+
+  const timeoutRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+
+  const isPublishingRef =
+    useRef(false);
 
   const [
     uploadingImageFieldId,
@@ -202,7 +211,9 @@ export default function DocumentPage() {
 
         const categoriesResponse =
           await fetch(
-            `/api/categories?workspaceId=${encodeURIComponent(loadedDocument.workspaceId)}`
+            `/api/categories?workspaceId=${encodeURIComponent(
+              loadedDocument.workspaceId
+            )}`
           );
 
         if (categoriesResponse.ok) {
@@ -238,7 +249,8 @@ export default function DocumentPage() {
     if (
       !document ||
       !schema ||
-      !hasLoaded.current
+      !hasLoaded.current ||
+      isPublishingRef.current
     ) {
       return;
     }
@@ -263,111 +275,220 @@ export default function DocumentPage() {
     const timeout = window.setTimeout(
       async () => {
         timeoutRef.current = null;
-        const promise = executeSave();
-        pendingSaveRef.current = promise;
+
+        if (isPublishingRef.current) {
+          return;
+        }
+
+        const promise =
+          executeSave();
+
+        pendingSaveRef.current =
+          promise;
+
         await promise;
       },
       500
-    ) as unknown as ReturnType<typeof setTimeout>;
+    ) as unknown as ReturnType<
+      typeof setTimeout
+    >;
 
     timeoutRef.current = timeout;
 
     return () => {
       if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
+        window.clearTimeout(
+          timeoutRef.current
+        );
+
         timeoutRef.current = null;
       }
     };
-  }, [metadata, blocks, id, document?.status, document, executeSave, schema]);
+  }, [
+    metadata,
+    blocks,
+    id,
+    document?.status,
+    document,
+    executeSave,
+    schema,
+  ]);
 
   useEffect(() => {
-    function handleBeforeUnload(event: BeforeUnloadEvent) {
-      const currentFingerprint = createContentFingerprint(metadata, blocks);
+    function handleBeforeUnload(
+      event: BeforeUnloadEvent
+    ) {
+      const currentFingerprint =
+        createContentFingerprint(
+          metadata,
+          blocks
+        );
+
       const contentChanged =
-        currentFingerprint !== lastSavedFingerprint.current;
+        currentFingerprint !==
+        lastSavedFingerprint.current;
+
       if (contentChanged) {
         event.preventDefault();
         event.returnValue = "";
       }
     }
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [metadata, blocks, document, schema]);
+    window.addEventListener(
+      "beforeunload",
+      handleBeforeUnload
+    );
+
+    return () =>
+      window.removeEventListener(
+        "beforeunload",
+        handleBeforeUnload
+      );
+  }, [
+    metadata,
+    blocks,
+    document,
+    schema,
+  ]);
 
   async function executeSave(): Promise<void> {
-    if (!document) {
+    if (
+      !document ||
+      isPublishingRef.current
+    ) {
       return;
     }
-    const currentGen = saveGeneration.current + 1;
-    saveGeneration.current = currentGen;
 
-    const currentFingerprint = createContentFingerprint(metadata, blocks);
+    const currentGen =
+      saveGeneration.current + 1;
+
+    saveGeneration.current =
+      currentGen;
+
+    const currentFingerprint =
+      createContentFingerprint(
+        metadata,
+        blocks
+      );
 
     const nextStatus =
-      document.status === "published" ? "modified" : document.status;
+      document.status === "published"
+        ? "modified"
+        : document.status;
 
     const updatedDocument: Document = {
       id: document.id,
-      workspaceId: document.workspaceId,
-      contentTypeId: document.contentTypeId,
-      metadata: { ...metadata },
-      blocks: [...blocks],
+      workspaceId:
+        document.workspaceId,
+      contentTypeId:
+        document.contentTypeId,
+      metadata: {
+        ...metadata,
+      },
+      blocks: [
+        ...blocks,
+      ],
       status: nextStatus,
-      updatedAt: new Date().toISOString(),
-      ...(document.publishedAt ? { publishedAt: document.publishedAt } : {}),
+      updatedAt:
+        new Date().toISOString(),
+      ...(document.publishedAt
+        ? {
+            publishedAt:
+              document.publishedAt,
+          }
+        : {}),
+      ...(document.publishedSlug
+        ? {
+            publishedSlug:
+              document.publishedSlug,
+          }
+        : {}),
     };
 
     setSaveStatus("saving");
     setSaveError(null);
 
     try {
-      const response = await fetch(
-        `/api/documents/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatedDocument),
-        });
+      const response =
+        await fetch(
+          `/api/documents/${id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body:
+              JSON.stringify(
+                updatedDocument
+              ),
+          }
+        );
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => "");
-        throw new Error(errorText || "Save failed");
+        const errorText =
+          await response
+            .text()
+            .catch(() => "");
+
+        throw new Error(
+          errorText ||
+            "Save failed"
+        );
       }
 
-      if (saveGeneration.current !== currentGen) {
+      if (
+        saveGeneration.current !==
+        currentGen
+      ) {
         return;
       }
 
-      setDocument(updatedDocument);
-      lastSavedFingerprint.current = currentFingerprint;
+      setDocument(
+        updatedDocument
+      );
+
+      lastSavedFingerprint.current =
+        currentFingerprint;
+
       setSaveStatus("saved");
       setSaveError(null);
     } catch (error) {
-      if (saveGeneration.current !== currentGen) {
+      if (
+        saveGeneration.current !==
+        currentGen
+      ) {
         return;
       }
+
       const message =
         error instanceof Error
           ? error.message
           : "Save failed";
+
       setSaveStatus("failed");
       setSaveError(message);
+
       throw error;
     }
   }
 
   async function flushPendingSave(): Promise<void> {
     if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
+      window.clearTimeout(
+        timeoutRef.current
+      );
+
       timeoutRef.current = null;
+
       await executeSave();
     }
+
     if (pendingSaveRef.current) {
       await pendingSaveRef.current;
-      pendingSaveRef.current = null;
+
+      pendingSaveRef.current =
+        null;
     }
   }
 
@@ -396,7 +517,8 @@ export default function DocumentPage() {
     setImageUploadError(null);
 
     try {
-      const formData = new FormData();
+      const formData =
+        new FormData();
 
       formData.append(
         "file",
@@ -420,17 +542,19 @@ export default function DocumentPage() {
         alt
       );
 
-      const response = await fetch(
-        "/api/media/upload",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response =
+        await fetch(
+          "/api/media/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
 
-      const result = await response
-        .json()
-        .catch(() => null) as {
+      const result =
+        (await response
+          .json()
+          .catch(() => null)) as {
           asset?: {
             url?: unknown;
           };
@@ -446,9 +570,13 @@ export default function DocumentPage() {
         );
       }
 
-      const url = result?.asset?.url;
+      const url =
+        result?.asset?.url;
 
-      if (typeof url !== "string" || !url) {
+      if (
+        typeof url !== "string" ||
+        !url
+      ) {
         throw new Error(
           "The upload did not return an image URL."
         );
@@ -742,13 +870,19 @@ export default function DocumentPage() {
                   id={`${field.id}-upload`}
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                  disabled={isUploading}
+                  disabled={
+                    isUploading
+                  }
                   className="sr-only"
-                  onChange={(event) => {
+                  onChange={(
+                    event
+                  ) => {
                     const file =
-                      event.target.files?.[0];
+                      event.target
+                        .files?.[0];
 
-                    event.target.value = "";
+                    event.target.value =
+                      "";
 
                     if (file) {
                       void uploadImage(
@@ -772,7 +906,9 @@ export default function DocumentPage() {
                   className="text-sm text-red-600"
                   role="alert"
                 >
-                  {imageUploadError}
+                  {
+                    imageUploadError
+                  }
                 </p>
               )}
 
@@ -985,12 +1121,28 @@ export default function DocumentPage() {
   }
 
   async function handlePublish() {
-    if (!document) {
+    if (
+      !document ||
+      isPublishingRef.current
+    ) {
       return;
     }
 
     try {
+      /*
+       * First make absolutely sure the latest editor state
+       * has reached the database. The publish API reads the
+       * persisted document, so publishing must happen only
+       * after this save has completed.
+       */
       await flushPendingSave();
+
+      /*
+       * From this point onward autosave must stay out of the
+       * way. The publish operation is authoritative.
+       */
+      isPublishingRef.current =
+        true;
 
       setPublishStatus(
         "publishing"
@@ -1019,57 +1171,66 @@ export default function DocumentPage() {
           new Date().toISOString(),
       };
 
-      const response = await fetch(
-        `/api/documents/${id}/publish`,
-        {
-          method: "POST",
+      const response =
+        await fetch(
+          `/api/documents/${id}/publish`,
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify(
-            publishedDocument
-          ),
-        }
-      );
+            body:
+              JSON.stringify(
+                publishedDocument
+              ),
+          }
+        );
 
       if (!response.ok) {
+        const errorText =
+          await response
+            .text()
+            .catch(() => "");
+
         throw new Error(
-          "Publishing request failed."
+          errorText ||
+            "Publishing request failed."
         );
       }
 
-      const saveResponse = await fetch(
-        `/api/documents/${id}`,
-        {
-          method: "PUT",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify(
-            publishedDocument
-          ),
-        }
-      );
-
-      if (!saveResponse.ok) {
-        throw new Error();
-      }
-
+      /*
+       * The publish endpoint is authoritative and has already
+       * persisted the published document.
+       *
+       * Do NOT issue another PUT here.
+       * Do NOT issue another GET here.
+       *
+       * The local editor state is updated from the exact
+       * document we submitted to the publish endpoint.
+       */
       setDocument(
         publishedDocument
       );
+
+      setMetadata({
+        ...publishedDocument.metadata,
+      });
+
+      setBlocks([
+        ...publishedDocument.blocks,
+      ]);
 
       lastSavedFingerprint.current =
         createContentFingerprint(
           publishedDocument.metadata,
           publishedDocument.blocks
         );
+
+      setSaveStatus("saved");
+      setSaveError(null);
 
       setPublishStatus(
         "published"
@@ -1083,6 +1244,9 @@ export default function DocumentPage() {
       setPublishStatus(
         "error"
       );
+    } finally {
+      isPublishingRef.current =
+        false;
     }
   }
 
@@ -1139,26 +1303,37 @@ export default function DocumentPage() {
 
           <div className="flex items-center gap-4">
             <span className="text-sm text-neutral-400">
-              {saveStatus === "saving"
+              {saveStatus ===
+              "saving"
                 ? "Saving..."
-                : saveStatus === "failed"
+                : saveStatus ===
+                  "failed"
                 ? "Save failed"
                 : "Saved"}
             </span>
-            {saveStatus === "failed" && saveError && (
-              <span className="text-sm text-red-500 flex items-center gap-2">
-                {saveError}
-                <button
-                  onClick={() => {
-                    setSaveError(null);
-                    setSaveStatus("saving");
-                  }}
-                  className="text-xs underline hover:text-red-700"
-                >
-                  Retry
-                </button>
-              </span>
-            )}
+
+            {saveStatus ===
+              "failed" &&
+              saveError && (
+                <span className="flex items-center gap-2 text-sm text-red-500">
+                  {saveError}
+
+                  <button
+                    onClick={() => {
+                      setSaveError(
+                        null
+                      );
+
+                      setSaveStatus(
+                        "saving"
+                      );
+                    }}
+                    className="text-xs underline hover:text-red-700"
+                  >
+                    Retry
+                  </button>
+                </span>
+              )}
 
             {(
               document.status ===

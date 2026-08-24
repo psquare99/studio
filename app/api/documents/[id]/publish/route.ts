@@ -51,34 +51,46 @@ export async function DELETE(
     }
 
     const incomingDocument =
-  (await request.json()) as Document;
+      (await request.json()) as Document;
 
-if (!incomingDocument.id) {
-  return NextResponse.json(
-    {
-      error:
-        "Document ID is required.",
-    },
-    {
-      status: 400,
-    },
-  );
-}
+    if (!incomingDocument.id) {
+      return NextResponse.json(
+        {
+          error:
+            "Document ID is required.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
 
-const document =
-  await loadDocument(incomingDocument.id);
+    const document =
+      await loadDocument(incomingDocument.id);
 
-if (!document) {
-  return NextResponse.json(
-    {
-      error:
-        "Document not found.",
-    },
-    {
-      status: 404,
-    },
-  );
-}
+    if (!document) {
+      return NextResponse.json(
+        {
+          error:
+            "Document not found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    if (
+      document.status !== "published" &&
+      document.status !== "modified"
+    ) {
+      return NextResponse.json({
+        success: true,
+        unpublished: false,
+      });
+    }
+
+    await deletePublishedDocument(document);
 
     return NextResponse.json({
       success: true,
@@ -122,67 +134,53 @@ export async function POST(
     }
 
     const incomingDocument =
-  (await request.json()) as Document;
+      (await request.json()) as Document;
 
-if (!incomingDocument.id) {
-  return NextResponse.json(
-    {
-      error:
-        "Document ID is required.",
-    },
-    {
-      status: 400,
-    },
-  );
-}
+    if (!incomingDocument.id) {
+      return NextResponse.json(
+        {
+          error:
+            "Document ID is required.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
 
-const document =
-  await loadDocument(incomingDocument.id);
+    const document =
+      await loadDocument(incomingDocument.id);
 
-if (!document) {
-  return NextResponse.json(
-    {
-      error:
-        "Document not found.",
-    },
-    {
-      status: 404,
-    },
-  );
-}
+    if (!document) {
+      return NextResponse.json(
+        {
+          error:
+            "Document not found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
 
-if (
-  document.status !== "published" &&
-  document.status !== "modified"
-) {
-  return NextResponse.json({
-    success: true,
-    unpublished: false,
-  });
-}
-
-await deletePublishedDocument(document);
-if (
-  document.status !== "published"
-) {
-  return NextResponse.json(
-    {
-      error:
-        "Document must be marked as published.",
-    },
-    {
-      status: 400,
-    },
-  );
-}
-
+    /*
+     * A document can be published when it has never been
+     * published before (draft) or when it is already published
+     * or has been modified since its last publish. It must NOT
+     * be unpublished here — that is the DELETE handler's job.
+     * The previous version of this handler incorrectly called
+     * deletePublishedDocument() and rejected "modified" documents
+     * during publish, which broke the Update flow entirely.
+     */
     if (
-      document.status !== "published"
+      document.status !== "draft" &&
+      document.status !== "published" &&
+      document.status !== "modified"
     ) {
       return NextResponse.json(
         {
           error:
-            "Document must be marked as published.",
+            "Document must be a draft, published, or modified document to be published.",
         },
         {
           status: 400,
@@ -191,12 +189,14 @@ if (
     }
 
     const { publicationPath, publishedSlug } =
-  await publishDocument(document);
+      await publishDocument(document);
 
-await updateDocument({
-  ...document,
-  publishedSlug,
-});
+    await updateDocument({
+      ...document,
+      status: "published",
+      publishedSlug,
+    });
+
     return NextResponse.json({
       success: true,
       publicationPath,
