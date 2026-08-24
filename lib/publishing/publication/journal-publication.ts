@@ -2,7 +2,7 @@ import type { Document } from "@/lib/models/document";
 import type { PublishedDocument } from "../contracts/published-document";
 
 function getText(
-  value: Document["metadata"][string]
+  value: Document["metadata"][string],
 ): string {
   return typeof value === "string"
     ? value.trim()
@@ -10,35 +10,35 @@ function getText(
 }
 
 export function createJournalPublication(
-  document: Document
+  document: Document,
 ): PublishedDocument {
-  if (document.status !== "published") {
+  if (
+    document.status !== "published" &&
+    document.status !== "modified"
+  ) {
     throw new Error(
-      "Only published documents can be published."
+      "Only published or modified journals can be published.",
     );
   }
 
   if (document.contentTypeId !== "journal") {
     throw new Error(
-      `Cannot publish content type "${document.contentTypeId}" as a journal.`
+      `Cannot publish content type "${document.contentTypeId}" as a journal.`,
     );
   }
 
-  const title =
-    getText(
-      document.metadata.title
-    );
+  const title = getText(
+    document.metadata.title,
+  );
 
   if (!title) {
     throw new Error(
-      "A journal must have a title before it can be published."
+      "A journal must have a title before it can be published.",
     );
   }
 
   const slug =
-    getText(
-      document.metadata.slug
-    ) ||
+    getText(document.metadata.slug) ||
     title
       .toLowerCase()
       .trim()
@@ -47,24 +47,21 @@ export function createJournalPublication(
 
   if (!slug) {
     throw new Error(
-      "A valid slug could not be generated."
+      "A valid slug could not be generated.",
     );
   }
 
-  const excerpt =
-    getText(
-      document.metadata.excerpt
-    );
+  const excerpt = getText(
+    document.metadata.excerpt,
+  );
 
-  const category =
-    getText(
-      document.metadata.category
-    );
+  const category = getText(
+    document.metadata.category,
+  );
 
-  const location =
-    getText(
-      document.metadata.location
-    );
+  const location = getText(
+    document.metadata.location,
+  );
 
   const featured =
     document.metadata.featured === true ||
@@ -118,7 +115,7 @@ export function createJournalPublication(
         type: block.type,
 
         data: block.data,
-      })
+      }),
     ),
   };
 }
