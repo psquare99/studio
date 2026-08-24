@@ -36,4 +36,6 @@ export interface Document {
   publishedAt?: string;
 
   updatedAt: string;
+
+  publishedSlug?: string;
 }

@@ -58,6 +58,8 @@ export async function saveDocument(
   await updateDocument(document);
 }
 
+export { updateDocument };
+
 export async function removeDocument(
   id: string
 ): Promise<void> {
