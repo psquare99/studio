@@ -12,6 +12,11 @@ import {
   deletePublishedDocument,
 } from "@/services/publishing-service";
 
+import {
+  loadDocument,
+  updateDocument,
+} from "@/services/document-service";
+
 async function requireAuthentication() {
   const cookieStore =
     await cookies();
@@ -45,34 +50,35 @@ export async function DELETE(
       );
     }
 
-    const document =
-      (await request.json()) as Document;
+    const incomingDocument =
+  (await request.json()) as Document;
 
-    if (!document.id) {
-      return NextResponse.json(
-        {
-          error:
-            "Document ID is required.",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
+if (!incomingDocument.id) {
+  return NextResponse.json(
+    {
+      error:
+        "Document ID is required.",
+    },
+    {
+      status: 400,
+    },
+  );
+}
 
-    if (
-      document.status !== "published" &&
-      document.status !== "modified"
-    ) {
-      return NextResponse.json({
-        success: true,
-        unpublished: false,
-      });
-    }
+const document =
+  await loadDocument(incomingDocument.id);
 
-    await deletePublishedDocument(
-      document,
-    );
+if (!document) {
+  return NextResponse.json(
+    {
+      error:
+        "Document not found.",
+    },
+    {
+      status: 404,
+    },
+  );
+}
 
     return NextResponse.json({
       success: true,
@@ -115,20 +121,60 @@ export async function POST(
       );
     }
 
-    const document =
-      (await request.json()) as Document;
+    const incomingDocument =
+  (await request.json()) as Document;
 
-    if (!document.id) {
-      return NextResponse.json(
-        {
-          error:
-            "Document ID is required.",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
+if (!incomingDocument.id) {
+  return NextResponse.json(
+    {
+      error:
+        "Document ID is required.",
+    },
+    {
+      status: 400,
+    },
+  );
+}
+
+const document =
+  await loadDocument(incomingDocument.id);
+
+if (!document) {
+  return NextResponse.json(
+    {
+      error:
+        "Document not found.",
+    },
+    {
+      status: 404,
+    },
+  );
+}
+
+if (
+  document.status !== "published" &&
+  document.status !== "modified"
+) {
+  return NextResponse.json({
+    success: true,
+    unpublished: false,
+  });
+}
+
+await deletePublishedDocument(document);
+if (
+  document.status !== "published"
+) {
+  return NextResponse.json(
+    {
+      error:
+        "Document must be marked as published.",
+    },
+    {
+      status: 400,
+    },
+  );
+}
 
     if (
       document.status !== "published"
@@ -145,19 +191,12 @@ export async function POST(
     }
 
     const { publicationPath, publishedSlug } =
-      await publishDocument(
-        document,
-      );
+  await publishDocument(document);
 
-    // Update the document's publishedSlug in the database
-    if (document.id) {
-      const { updateDocument } = await import("@/services/document-service");
-      await updateDocument({
-        ...document,
-        publishedSlug,
-      });
-    }
-
+await updateDocument({
+  ...document,
+  publishedSlug,
+});
     return NextResponse.json({
       success: true,
       publicationPath,
