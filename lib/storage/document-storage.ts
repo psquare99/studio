@@ -14,6 +14,7 @@ function fromDatabaseRow(
     status: string;
     updated_at: string;
     published_at: string | null;
+    published_slug: string | null;
   }
 ): Document {
   return {
@@ -45,6 +46,13 @@ function fromDatabaseRow(
             row.published_at,
         }
       : {}),
+
+    ...(row.published_slug
+      ? {
+          publishedSlug:
+            row.published_slug,
+        }
+      : {}),
   };
 }
 
@@ -74,6 +82,10 @@ function toDatabaseRow(
 
     published_at:
       document.publishedAt ??
+      null,
+
+    published_slug:
+      document.publishedSlug ??
       null,
   };
 }

@@ -144,10 +144,19 @@ export async function POST(
       );
     }
 
-    const publicationPath =
+    const { publicationPath, publishedSlug } =
       await publishDocument(
         document,
       );
+
+    // Update the document's publishedSlug in the database
+    if (document.id) {
+      const { updateDocument } = await import("@/services/document-service");
+      await updateDocument({
+        ...document,
+        publishedSlug,
+      });
+    }
 
     return NextResponse.json({
       success: true,

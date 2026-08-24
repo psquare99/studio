@@ -11,6 +11,10 @@ import {
   removeDocument,
 } from "@/services/document-service";
 
+import {
+  deletePublishedDocument,
+} from "@/services/publishing-service";
+
 async function requireAuthentication() {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get("workshop_session")?.value;
@@ -101,6 +105,25 @@ export async function DELETE(
 
     const { id } = await params;
 
+    // Load the document first to check its publication status
+    const document = await loadDocument(id);
+
+    if (!document) {
+      return NextResponse.json(
+        { error: "Document not found." },
+        { status: 404 },
+      );
+    }
+
+    // If the document was published or modified, delete the GitHub publication first
+    if (
+      document.status === "published" ||
+      document.status === "modified"
+    ) {
+      await deletePublishedDocument(document);
+    }
+
+    // Then delete the document from the database
     await removeDocument(id);
 
     return NextResponse.json({ success: true });
