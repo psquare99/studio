@@ -19,6 +19,5 @@ Not included yet:
 - Media library UI.
 - Image transformations/resizing.
 - Asset deletion/cleanup UI.
-- Project block-based publishing (deferred to a later phase).
 
 Before running it, apply the Supabase migration and configure the Cloudflare R2 binding plus the server-only `SUPABASE_SERVICE_ROLE_KEY` and `MEDIA_PUBLIC_URL`.
